@@ -1,0 +1,99 @@
+/* Enable Reviews Modal */
+
+.content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: var(--space-lg) var(--space-md);
+  gap: var(--space-md);
+}
+
+.title {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--ink);
+  margin: 0;
+}
+
+.subtitle {
+  font-size: 14px;
+  color: var(--stone);
+  margin: 0;
+  max-width: 280px;
+  line-height: 1.5;
+}
+
+.subtitle strong {
+  color: var(--ink);
+}
+
+.description {
+  font-size: 13px;
+  color: var(--slate);
+  margin: 0;
+  line-height: 1.6;
+  max-width: 300px;
+}
+
+/* Icons */
+.icon,
+.iconReady,
+.iconSuccess,
+.iconSpinner,
+.iconError {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+}
+
+.icon {
+  background: var(--warning-bg);
+  color: var(--warning);
+}
+
+.iconReady {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+  color: white;
+}
+
+.iconSuccess {
+  background: var(--success-bg);
+  color: var(--success);
+}
+
+.iconSpinner {
+  background: var(--cloud);
+  color: var(--primary);
+}
+
+.iconError {
+  background: var(--error-bg);
+  color: var(--error);
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Explorer Link */
+.explorerLink {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  font-size: 13px;
+  color: var(--primary);
+  text-decoration: none;
+}
+
+.explorerLink:hover {
+  text-decoration: underline;
+}

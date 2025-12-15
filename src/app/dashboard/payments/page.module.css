@@ -1,0 +1,282 @@
+.page {
+  width: 100%;
+  max-width: 1400px;
+}
+
+/* Summary Row */
+.summaryRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-md);
+  margin-bottom: var(--space-lg);
+}
+
+.summaryItem {
+  background: var(--white);
+  border: 1px solid var(--sand);
+  border-radius: var(--radius-md);
+  padding: var(--space-md) var(--space-lg);
+}
+
+.summaryLabel {
+  font-size: 12px;
+  color: var(--stone);
+  margin-bottom: 4px;
+}
+
+.summaryValue {
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.summaryValue.success {
+  color: var(--success);
+}
+
+.summaryChange {
+  font-size: 12px;
+  color: var(--success);
+  margin-top: 2px;
+}
+
+/* Tabs */
+.tabs {
+  display: flex;
+  gap: var(--space-xs);
+  margin-bottom: var(--space-md);
+  border-bottom: 1px solid var(--sand);
+}
+
+.tab {
+  padding: var(--space-sm) var(--space-md);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--stone);
+  background: none;
+  border: none;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+
+.tab:hover {
+  color: var(--ink);
+}
+
+.tab.active {
+  color: var(--ink);
+  border-bottom-color: var(--ink);
+}
+
+/* Transactions */
+.transactionsCard {
+  background: var(--white);
+  border: 1px solid var(--sand);
+  border-radius: var(--radius-md);
+}
+
+.transactionRow {
+  display: flex;
+  align-items: center;
+  padding: var(--space-md) var(--space-lg);
+  border-bottom: 1px solid var(--sand);
+  gap: var(--space-md);
+}
+
+.transactionRow:last-child {
+  border-bottom: none;
+}
+
+.transactionIcon {
+  width: 36px;
+  height: 36px;
+  background: var(--success-light);
+  color: var(--success);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.transactionInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.transactionTitle {
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+
+.transactionMeta {
+  font-size: 12px;
+  color: var(--stone);
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.transactionAmount {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--success);
+  text-align: right;
+}
+
+.transactionTime {
+  font-size: 12px;
+  color: var(--stone);
+  text-align: right;
+}
+
+.emptyState {
+  padding: var(--space-xl);
+  text-align: center;
+  color: var(--stone);
+}
+
+.emptyState svg {
+  margin-bottom: var(--space-md);
+  opacity: 0.5;
+}
+
+/* Section Title */
+.sectionTitle {
+  font-size: 16px;
+  font-weight: 600;
+  padding: var(--space-md) var(--space-lg);
+  border-bottom: 1px solid var(--sand);
+}
+
+/* Transaction History Table */
+.historyTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.historyTable th {
+  text-align: left;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--stone);
+  padding: var(--space-sm) var(--space-md);
+  background: var(--cloud);
+  border-bottom: 1px solid var(--sand);
+}
+
+.historyTable th:first-child {
+  padding-left: var(--space-lg);
+}
+
+.historyTable th:last-child {
+  padding-right: var(--space-lg);
+}
+
+.historyTable td {
+  font-size: 13px;
+  padding: var(--space-md);
+  border-bottom: 1px solid var(--sand);
+  vertical-align: middle;
+}
+
+.historyTable td:first-child {
+  padding-left: var(--space-lg);
+}
+
+.historyTable td:last-child {
+  padding-right: var(--space-lg);
+}
+
+.historyTable tr:last-child td {
+  border-bottom: none;
+}
+
+.callerAddress {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--stone);
+}
+
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.statusBadge.settled {
+  background: var(--green-50);
+  color: var(--green-600);
+}
+
+.statusBadge.verified {
+  background: var(--amber-50);
+  color: var(--amber-600);
+}
+
+.statusBadge.failed {
+  background: var(--red-50);
+  color: var(--red-600);
+}
+
+.txLink {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--primary);
+  text-decoration: none;
+}
+
+.txLink:hover {
+  text-decoration: underline;
+}
+
+.noTx {
+  font-size: 12px;
+  color: var(--stone);
+}
+
+.timestamp {
+  font-size: 12px;
+  color: var(--stone);
+  white-space: nowrap;
+}
+
+.loadingState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-xl);
+  color: var(--stone);
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@media (max-width: 768px) {
+  .summaryRow {
+    grid-template-columns: 1fr;
+  }
+
+  .historyTable th,
+  .historyTable td {
+    padding: var(--space-xs) var(--space-sm);
+    font-size: 11px;
+  }
+
+  .historyTable th:first-child,
+  .historyTable td:first-child {
+    padding-left: var(--space-sm);
+  }
+}

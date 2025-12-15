@@ -1,0 +1,268 @@
+.page {
+  width: 100%;
+  max-width: 1400px;
+}
+
+/* Summary Stats */
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: var(--space-md);
+  margin-bottom: var(--space-xl);
+}
+
+.statCard {
+  background: var(--white);
+  border: 1px solid var(--sand);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.statIcon {
+  width: 48px;
+  height: 48px;
+  background: var(--cloud);
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--stone);
+}
+
+.statContent {
+  flex: 1;
+}
+
+.statValue {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.statLabel {
+  font-size: 13px;
+  color: var(--stone);
+  margin-top: 2px;
+}
+
+/* Agents Grid */
+.agentsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: var(--space-lg);
+}
+
+.agentCard {
+  background: var(--white);
+  border: 1px solid var(--sand);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  display: flex;
+  flex-direction: column;
+}
+
+.agentCard:hover {
+  border-color: var(--ink);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+}
+
+.agentCardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--space-md);
+}
+
+.agentIcon {
+  width: 44px;
+  height: 44px;
+  background: var(--cloud);
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.agentName {
+  font-family: var(--font-sans);
+  font-size: 17px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: var(--ink);
+}
+
+.agentDesc {
+  font-size: 14px;
+  color: var(--stone);
+  line-height: 1.5;
+  margin-bottom: var(--space-md);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  flex: 1;
+}
+
+.agentMeta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--sand);
+  margin-bottom: var(--space-md);
+}
+
+.agentCategory {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--stone);
+}
+
+.agentPrice {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.agentStats {
+  display: flex;
+  gap: var(--space-xl);
+}
+
+.agentStatItem {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.agentStatValue {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.agentStatLabel {
+  font-size: 12px;
+  color: var(--stone);
+}
+
+/* Add New Agent Card */
+.addAgentCard {
+  background: var(--paper);
+  border: 2px dashed var(--sand);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  text-decoration: none;
+  color: var(--stone);
+  min-height: 220px;
+  transition: border-color 0.2s, color 0.2s, background 0.2s;
+}
+
+.addAgentCard:hover {
+  border-color: var(--ink);
+  color: var(--ink);
+  background: var(--cloud);
+}
+
+.addAgentCard span {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* States */
+.loadingState,
+.errorState {
+  background: var(--white);
+  border: 1px solid var(--sand);
+  border-radius: var(--radius-lg);
+  text-align: center;
+  padding: var(--space-3xl) var(--space-xl);
+}
+
+.loadingState p,
+.errorState p {
+  font-size: 15px;
+  color: var(--stone);
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+  margin-bottom: var(--space-md);
+  color: var(--stone);
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.errorText {
+  color: var(--error);
+  margin-bottom: var(--space-md);
+}
+
+/* Empty State */
+.emptyState {
+  background: var(--white);
+  border: 1px solid var(--sand);
+  border-radius: var(--radius-lg);
+  text-align: center;
+  padding: var(--space-3xl) var(--space-xl);
+}
+
+.emptyIcon {
+  width: 72px;
+  height: 72px;
+  background: var(--cloud);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto var(--space-lg);
+  color: var(--stone);
+}
+
+.emptyTitle {
+  font-family: var(--font-sans);
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: var(--space-sm);
+}
+
+.emptyDesc {
+  color: var(--stone);
+  font-size: 15px;
+  margin-bottom: var(--space-lg);
+  max-width: 320px;
+  margin-left: auto;
+  margin-right: auto;
+  line-height: 1.5;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .statsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .agentsGrid {
+    grid-template-columns: 1fr;
+  }
+}

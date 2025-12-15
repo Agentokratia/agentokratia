@@ -1,0 +1,252 @@
+.container {
+  background: var(--white);
+  border: 1px solid var(--sand);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-md) var(--space-lg);
+  border-bottom: 1px solid var(--sand);
+  background: var(--cloud);
+}
+
+.title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--ink);
+  margin: 0;
+}
+
+.closeBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: none;
+  border: none;
+  color: var(--stone);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+}
+
+.closeBtn:hover {
+  background: var(--sand);
+  color: var(--ink);
+}
+
+.content {
+  padding: var(--space-lg);
+}
+
+/* Rating Section */
+.ratingSection {
+  margin-bottom: var(--space-lg);
+}
+
+.label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--stone);
+  margin-bottom: var(--space-sm);
+}
+
+.optional {
+  font-weight: 400;
+  text-transform: none;
+  color: var(--stone);
+}
+
+.stars {
+  display: flex;
+  gap: 4px;
+  margin-bottom: var(--space-xs);
+}
+
+.starBtn {
+  padding: 4px;
+  background: none;
+  border: none;
+  color: var(--sand);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.starBtn:hover {
+  transform: scale(1.1);
+}
+
+.starBtn.active {
+  color: #fbbf24;
+}
+
+.ratingText {
+  font-size: 13px;
+  color: var(--stone);
+}
+
+/* Tags Section */
+.tagsSection {
+  margin-bottom: var(--space-lg);
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+.tag {
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  background: var(--cloud);
+  border: 1px solid var(--sand);
+  border-radius: var(--radius-full);
+  color: var(--stone);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.tag:hover {
+  border-color: var(--stone);
+  color: var(--ink);
+}
+
+.tag.selected {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--white);
+}
+
+/* Actions */
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-md);
+}
+
+.note {
+  font-size: 11px;
+  color: var(--stone);
+  text-align: center;
+  margin: 0;
+}
+
+/* Success State */
+.successContent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--space-xl) var(--space-lg);
+  text-align: center;
+}
+
+.successIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  background: rgba(34, 197, 94, 0.1);
+  border-radius: 50%;
+  color: var(--success);
+  margin-bottom: var(--space-md);
+}
+
+.successTitle {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--ink);
+  margin: 0 0 var(--space-sm) 0;
+}
+
+.successDesc {
+  font-size: 14px;
+  color: var(--stone);
+  margin: 0 0 var(--space-md) 0;
+}
+
+.txLink {
+  font-size: 13px;
+  color: var(--success);
+  margin-bottom: var(--space-md);
+}
+
+.txLink:hover {
+  text-decoration: underline;
+}
+
+/* Error State */
+.errorContent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--space-xl) var(--space-lg);
+  text-align: center;
+}
+
+.errorIcon {
+  color: #ef4444;
+  margin-bottom: var(--space-md);
+}
+
+.errorContent p {
+  font-size: 14px;
+  color: var(--stone);
+  margin: 0 0 var(--space-md) 0;
+}
+
+/* Expired State */
+.expiredContent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--space-xl) var(--space-lg);
+  text-align: center;
+}
+
+.expiredIcon {
+  color: var(--stone);
+  margin-bottom: var(--space-md);
+}
+
+.expiredContent p {
+  font-size: 14px;
+  color: var(--stone);
+  margin: 0;
+}
+
+/* Spinner */
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .content {
+    padding: var(--space-md);
+  }
+
+  .actions {
+    flex-direction: column;
+  }
+
+  .actions button {
+    width: 100%;
+  }
+}

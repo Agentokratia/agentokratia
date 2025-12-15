@@ -1,0 +1,363 @@
+/* Connect page - Split screen layout */
+
+.page {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+/* Left - Brand side */
+.brandSide {
+  background: var(--ink);
+  color: var(--white);
+  padding: 48px;
+  display: flex;
+  flex-direction: column;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+  color: var(--white);
+}
+
+.logo span {
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.brandContent {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  max-width: 480px;
+}
+
+.brandTitle {
+  font-family: var(--font-serif);
+  font-size: 56px;
+  font-weight: 400;
+  line-height: 1.1;
+  letter-spacing: -2px;
+  margin: 0 0 24px 0;
+}
+
+.brandSubtitle {
+  font-size: 20px;
+  color: rgba(255, 255, 255, 0.7);
+  line-height: 1.6;
+  margin: 0 0 48px 0;
+}
+
+.stats {
+  display: flex;
+  gap: 48px;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+}
+
+.statValue {
+  font-size: 36px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.statLabel {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.5);
+  margin-top: 8px;
+}
+
+.brandFooter {
+  display: flex;
+  gap: 24px;
+  font-size: 13px;
+}
+
+.brandFooter a {
+  color: rgba(255, 255, 255, 0.5);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.brandFooter a:hover {
+  color: var(--white);
+}
+
+/* Right - Connect side */
+.connectSide {
+  background: var(--paper);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px;
+}
+
+.connectCard {
+  width: 100%;
+  max-width: 380px;
+  text-align: center;
+}
+
+/* Badge */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  background: rgba(34, 197, 94, 0.1);
+  color: #22C55E;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: 9999px;
+  margin-bottom: 32px;
+}
+
+.badge::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  background: #22C55E;
+  border-radius: 50%;
+}
+
+.connectTitle {
+  font-family: var(--font-serif);
+  font-size: 36px;
+  font-weight: 400;
+  color: var(--ink);
+  margin: 0 0 12px 0;
+  letter-spacing: -0.5px;
+}
+
+.connectDesc {
+  font-size: 18px;
+  color: var(--stone);
+  margin: 0 0 32px 0;
+  line-height: 1.5;
+}
+
+.connectAction {
+  display: flex;
+  justify-content: center;
+}
+
+/* Divider */
+.divider {
+  display: flex;
+  align-items: center;
+  margin: 24px 0;
+}
+
+.divider::before,
+.divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--sand);
+}
+
+.divider span {
+  padding: 0 16px;
+  font-size: 13px;
+  color: var(--stone);
+}
+
+/* Browse button */
+.browseBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 16px 28px;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--ink);
+  background: var(--white);
+  border: 1px solid var(--sand);
+  border-radius: 12px;
+  text-decoration: none;
+  transition: all 0.15s;
+}
+
+.browseBtn:hover {
+  background: var(--cloud);
+  border-color: var(--ink);
+}
+
+.walletHelp {
+  margin-top: 24px;
+  font-size: 13px;
+}
+
+.walletHelp a {
+  color: var(--stone);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.walletHelp a:hover {
+  color: var(--ink);
+}
+
+/* Centered page wrapper (for signing states) */
+.pageCentered {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--paper);
+}
+
+.card {
+  background: var(--white);
+  border: 1px solid var(--sand);
+  border-radius: 16px;
+  padding: 48px;
+  width: 100%;
+  max-width: 400px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.cardTitle {
+  font-family: var(--font-serif);
+  font-size: 24px;
+  font-weight: 400;
+  color: var(--ink);
+  margin: var(--space-md) 0 var(--space-sm) 0;
+}
+
+.cardDesc {
+  font-size: 15px;
+  color: var(--stone);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.cardHint {
+  font-size: 13px;
+  color: var(--stone);
+  margin: var(--space-sm) 0 0 0;
+}
+
+.cardActions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  width: 100%;
+  margin-top: var(--space-lg);
+}
+
+/* Spinner */
+.spinner {
+  width: 32px;
+  height: 32px;
+  border: 2px solid var(--sand);
+  border-top-color: var(--ink);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin: var(--space-sm) 0;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Buttons */
+.btnPrimary {
+  background: var(--ink);
+  color: var(--white);
+  border: none;
+  padding: 12px 24px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+  width: 100%;
+}
+
+.btnPrimary:hover {
+  background: #333;
+}
+
+.btnGhost {
+  background: transparent;
+  color: var(--stone);
+  border: none;
+  padding: 12px 24px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+
+.btnGhost:hover {
+  color: var(--ink);
+}
+
+/* Responsive - stack on mobile */
+@media (max-width: 900px) {
+  .page {
+    grid-template-columns: 1fr;
+  }
+
+  .brandSide {
+    padding: 32px 24px;
+    min-height: auto;
+  }
+
+  .brandContent {
+    padding: 48px 0;
+  }
+
+  .brandTitle {
+    font-size: 40px;
+    letter-spacing: -1px;
+  }
+
+  .brandSubtitle {
+    font-size: 16px;
+    margin-bottom: 32px;
+  }
+
+  .stats {
+    gap: 32px;
+  }
+
+  .statValue {
+    font-size: 24px;
+  }
+
+  .connectSide {
+    padding: 48px 24px;
+  }
+
+  .connectCard {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .brandTitle {
+    font-size: 32px;
+  }
+
+  .stats {
+    flex-wrap: wrap;
+    gap: 24px;
+  }
+
+  .stat {
+    min-width: 80px;
+  }
+}

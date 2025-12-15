@@ -1,0 +1,56 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  border-radius: var(--radius-full);
+  white-space: nowrap;
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.sm {
+  font-size: 11px;
+  padding: 3px 10px;
+}
+
+.sm .dot {
+  width: 5px;
+  height: 5px;
+}
+
+.md {
+  font-size: 12px;
+  padding: 4px 12px;
+}
+
+.default {
+  background: var(--cloud);
+  color: var(--stone);
+}
+
+.success {
+  background: var(--success-light);
+  color: var(--success);
+}
+
+.warning {
+  background: var(--warning-light);
+  color: var(--warning);
+}
+
+.error {
+  background: var(--error-light);
+  color: var(--error);
+}
+
+.info {
+  background: var(--info-light);
+  color: var(--info);
+}

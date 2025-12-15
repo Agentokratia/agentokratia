@@ -1,0 +1,110 @@
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  font-family: var(--font-sans);
+  font-weight: 500;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Variants */
+.primary {
+  background: var(--ink);
+  color: var(--white);
+}
+
+.primary:hover:not(:disabled) {
+  background: #333;
+}
+
+.secondary {
+  background: var(--white);
+  color: var(--ink);
+  border: 1px solid var(--sand);
+}
+
+.secondary:hover:not(:disabled) {
+  background: var(--cloud);
+  border-color: var(--stone);
+}
+
+.outline {
+  background: transparent;
+  color: var(--ink);
+  border: 1px solid var(--ink);
+}
+
+.outline:hover:not(:disabled) {
+  background: var(--ink);
+  color: var(--white);
+}
+
+.success {
+  background: var(--success);
+  color: var(--white);
+}
+
+.success:hover:not(:disabled) {
+  background: #1da750;
+}
+
+/* Sizes */
+.sm {
+  font-size: 13px;
+  padding: 8px 14px;
+}
+
+.md {
+  font-size: 14px;
+  padding: 12px 20px;
+}
+
+.lg {
+  font-size: 16px;
+  padding: 14px 28px;
+}
+
+/* States */
+.fullWidth {
+  width: 100%;
+}
+
+.loading {
+  position: relative;
+  color: transparent;
+}
+
+.spinner {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+.primary .spinner {
+  border-color: var(--white);
+  border-right-color: transparent;
+}
+
+.hiddenText {
+  visibility: hidden;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

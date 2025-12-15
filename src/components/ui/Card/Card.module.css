@@ -1,0 +1,64 @@
+.card {
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.default {
+  border: 1px solid var(--sand);
+}
+
+.outlined {
+  border: 1px solid var(--stone);
+}
+
+.elevated {
+  border: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.padding-none {
+  padding: 0;
+}
+
+.padding-sm {
+  padding: var(--space-sm);
+}
+
+.padding-md {
+  padding: var(--space-md);
+}
+
+.padding-lg {
+  padding: var(--space-lg);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: var(--space-md);
+  border-bottom: 1px solid var(--sand);
+  margin-bottom: var(--space-md);
+}
+
+.title {
+  font-family: var(--font-sans);
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--ink);
+  margin: 0;
+}
+
+.content {
+  color: var(--ink);
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--sand);
+  margin-top: var(--space-md);
+}

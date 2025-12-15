@@ -1,0 +1,115 @@
+/* Public Footer - Unified across all public pages */
+
+.footer {
+  background: var(--ink);
+  color: var(--cloud);
+  margin-top: auto;
+}
+
+.container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+/* Top section */
+.top {
+  display: flex;
+  justify-content: space-between;
+  gap: 64px;
+  padding: 48px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Brand */
+.brand {
+  max-width: 280px;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: var(--white);
+  font-family: var(--font-serif);
+  font-size: 18px;
+  font-weight: 500;
+  margin-bottom: 12px;
+}
+
+.tagline {
+  font-size: 14px;
+  color: var(--stone);
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* Links */
+.links {
+  display: flex;
+  gap: 64px;
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 140px;
+}
+
+.column h4 {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--stone);
+  margin: 0 0 4px 0;
+}
+
+.column a {
+  font-size: 14px;
+  color: var(--cloud);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.column a:hover {
+  color: var(--white);
+}
+
+/* Bottom */
+.bottom {
+  padding: 20px 0;
+  text-align: center;
+}
+
+.bottom p {
+  font-size: 13px;
+  color: var(--stone);
+  margin: 0;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .top {
+    flex-direction: column;
+    gap: 40px;
+    padding: 40px 0;
+  }
+
+  .brand {
+    max-width: none;
+  }
+
+  .links {
+    gap: 40px;
+  }
+}
+
+@media (max-width: 480px) {
+  .links {
+    flex-direction: column;
+    gap: 32px;
+  }
+}

@@ -1,0 +1,199 @@
+/* Simple Agent Creation Page */
+
+.page {
+  min-height: 100vh;
+  background: var(--paper);
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-md) var(--space-lg);
+  border-bottom: 1px solid var(--sand);
+  background: var(--white);
+}
+
+.backBtn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--stone);
+  text-decoration: none;
+  font-size: 14px;
+  transition: color 0.15s;
+}
+
+.backBtn:hover {
+  color: var(--ink);
+}
+
+.content {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-xl);
+}
+
+.card {
+  width: 100%;
+  max-width: 440px;
+  background: var(--white);
+  border: 1px solid var(--sand);
+  border-radius: var(--radius-lg);
+  padding: var(--space-xl);
+}
+
+.title {
+  font-family: var(--font-serif);
+  font-size: 22px;
+  font-weight: 500;
+  margin: 0 0 var(--space-xs);
+  color: var(--ink);
+}
+
+.subtitle {
+  font-size: 14px;
+  color: var(--stone);
+  margin: 0 0 var(--space-xl);
+  line-height: 1.5;
+}
+
+.formGroup {
+  margin-bottom: var(--space-lg);
+}
+
+.label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 6px;
+  color: var(--ink);
+}
+
+.input,
+.select {
+  width: 100%;
+  padding: 12px 14px;
+  font-size: 15px;
+  font-family: var(--font-sans);
+  border: 1px solid var(--sand);
+  border-radius: var(--radius-sm);
+  background: var(--white);
+  color: var(--ink);
+  transition: border-color 0.15s;
+}
+
+.input:focus,
+.select:focus {
+  outline: none;
+  border-color: var(--ink);
+}
+
+.input::placeholder {
+  color: var(--stone);
+}
+
+.hint {
+  font-size: 12px;
+  color: var(--stone);
+  margin-top: 6px;
+  line-height: 1.4;
+}
+
+.error {
+  padding: 12px 14px;
+  background: #fef2f2;
+  border: 1px solid var(--error);
+  border-radius: var(--radius-sm);
+  color: var(--error);
+  font-size: 14px;
+  margin-bottom: var(--space-md);
+}
+
+.submitBtn {
+  width: 100%;
+  padding: 14px;
+  font-size: 15px;
+  font-weight: 500;
+  margin-top: var(--space-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* What's Next Section */
+.nextSteps {
+  margin-top: var(--space-xl);
+  padding-top: var(--space-lg);
+  border-top: 1px solid var(--sand);
+}
+
+.nextStepsTitle {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--stone);
+  margin-bottom: var(--space-md);
+}
+
+.stepItem {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  padding: var(--space-sm) 0;
+  font-size: 13px;
+  color: var(--ink);
+}
+
+.stepNumber {
+  width: 20px;
+  height: 20px;
+  background: var(--cloud);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--stone);
+  flex-shrink: 0;
+}
+
+.stepText {
+  line-height: 1.4;
+}
+
+.stepText strong {
+  font-weight: 500;
+}
+
+.stepText span {
+  color: var(--stone);
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .content {
+    padding: var(--space-md);
+    align-items: flex-start;
+    padding-top: var(--space-xl);
+  }
+
+  .card {
+    border-radius: var(--radius-md);
+  }
+}
