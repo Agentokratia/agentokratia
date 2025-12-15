@@ -15,7 +15,7 @@ CREATE TYPE agent_category AS ENUM ('ai', 'data', 'content', 'tools', 'other');
 -- =============================================
 
 CREATE TABLE IF NOT EXISTS agents (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 
   -- Owner reference (3NF - join to get wallet_address)
   -- This changes when agent NFT is transferred and claimed

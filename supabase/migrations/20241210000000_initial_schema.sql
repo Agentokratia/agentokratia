@@ -1,15 +1,14 @@
 -- Agentokratia Database Schema
 -- Core tables: users, auth, sessions
 
--- Enable UUID extension
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+-- Note: gen_random_uuid() is built-in to Postgres 13+ (used by Supabase)
 
 -- =============================================
 -- USERS TABLE
 -- =============================================
 
 CREATE TABLE IF NOT EXISTS users (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   wallet_address VARCHAR(42) UNIQUE NOT NULL,
 
   -- Profile info
@@ -34,7 +33,7 @@ CREATE TABLE IF NOT EXISTS users (
 -- =============================================
 
 CREATE TABLE IF NOT EXISTS auth_nonces (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   nonce VARCHAR(64) UNIQUE NOT NULL,
   wallet_address VARCHAR(42),
   expires_at TIMESTAMPTZ NOT NULL,
@@ -47,7 +46,7 @@ CREATE TABLE IF NOT EXISTS auth_nonces (
 -- =============================================
 
 CREATE TABLE IF NOT EXISTS user_sessions (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES users(id) ON DELETE CASCADE,
   token_hash VARCHAR(128) NOT NULL,
   expires_at TIMESTAMPTZ NOT NULL,
@@ -62,7 +61,7 @@ CREATE TABLE IF NOT EXISTS user_sessions (
 -- =============================================
 
 CREATE TABLE IF NOT EXISTS whitelist_invites (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   email VARCHAR(255) UNIQUE NOT NULL,
   invited_by UUID REFERENCES users(id),
   invite_code VARCHAR(32) UNIQUE NOT NULL,
