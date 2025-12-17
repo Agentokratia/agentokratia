@@ -3,12 +3,14 @@ import { supabaseAdmin, DbAgent } from '@/lib/db/supabase';
 import { getAuthenticatedUser } from '@/lib/auth/session';
 import { createAgentSchema, validate } from '@/lib/validations/schemas';
 import { centsToDollars, dollarsToCents } from '@/lib/utils/format';
+import { slugify } from '@/lib/utils/slugify';
 
 // Helper to format agent for API response
 function formatAgent(agent: DbAgent) {
   return {
     id: agent.id,
     name: agent.name,
+    slug: agent.slug,
     description: agent.description,
     category: agent.category,
     endpointUrl: agent.endpoint_url,
@@ -79,11 +81,28 @@ export async function POST(request: NextRequest) {
     // Convert price from dollars to cents using viem
     const priceInCents = dollarsToCents(pricePerCall);
 
+    // Generate slug from name
+    let slug = slugify(name);
+
+    // Check if slug already exists for this owner
+    const { data: existingSlug } = await supabaseAdmin
+      .from('agents')
+      .select('id')
+      .eq('owner_id', auth.userId)
+      .eq('slug', slug)
+      .single();
+
+    // If slug exists, append timestamp to make unique
+    if (existingSlug) {
+      slug = `${slug}-${Date.now()}`;
+    }
+
     const { data: newAgent, error } = await supabaseAdmin
       .from('agents')
       .insert({
         owner_id: auth.userId,
         name,
+        slug,
         description: description || null,
         category,
         endpoint_url: endpointUrl,

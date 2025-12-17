@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useAccount, useChainId, useSwitchChain, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { Check, AlertCircle, Loader2, ExternalLink, MessageSquare } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal/Modal';
 import { Button } from '@/components/ui/Button/Button';
 import { useNetworkConfig, getExplorerTxUrl } from '@/lib/network/client';
-import { useAuthStore } from '@/lib/store';
+import { useAuthStore, usePendingTransactionStore } from '@/lib/store';
 import { IDENTITY_REGISTRY_ABI } from '@/lib/erc8004/contracts';
 import styles from './EnableReviewsModal.module.css';
 
@@ -32,6 +32,7 @@ export function EnableReviewsModal({
   onSuccess,
 }: EnableReviewsModalProps) {
   const { token } = useAuthStore();
+  const { setPending, clearPending } = usePendingTransactionStore();
   const { isConnected } = useAccount();
   const walletChainId = useChainId();
   const { switchChain } = useSwitchChain();
@@ -42,6 +43,9 @@ export function EnableReviewsModal({
   const [error, setError] = useState<string | null>(null);
   const [signerAddress, setSignerAddress] = useState<string | null>(initialSignerAddress);
 
+  // Track if we've already called confirm for this txHash to prevent duplicate calls
+  const confirmedTxRef = useRef<string | null>(null);
+
   const isSupportedChain = walletChainId === agentChainId;
 
   // Wait for transaction confirmation
@@ -50,11 +54,15 @@ export function EnableReviewsModal({
   });
 
   // Handle transaction confirmation - call confirm API
+  // Fixed: Don't rely on phase === 'confirming' as there's a race condition
+  // where tx can confirm before setPhase('confirming') is called
   useEffect(() => {
-    if (isConfirmed && txHash && phase === 'confirming') {
+    if (isConfirmed && txHash && confirmedTxRef.current !== txHash) {
+      // Mark this tx as being confirmed to prevent duplicate calls
+      confirmedTxRef.current = txHash;
       confirmWithBackend(txHash);
     }
-  }, [isConfirmed, txHash, phase]);
+  }, [isConfirmed, txHash]);
 
   // Reset state when modal opens/closes
   useEffect(() => {
@@ -62,6 +70,7 @@ export function EnableReviewsModal({
       setPhase('ready');
       setError(null);
       setSignerAddress(initialSignerAddress);
+      confirmedTxRef.current = null;
       resetWrite();
     }
   }, [open, resetWrite, initialSignerAddress]);
@@ -69,6 +78,14 @@ export function EnableReviewsModal({
   // Confirm the transaction with backend
   const confirmWithBackend = async (hash: string) => {
     setPhase('finalizing');
+
+    // Save to store BEFORE API call - survives browser crashes
+    setPending({
+      type: 'enable_reviews',
+      agentId,
+      txHash: hash,
+      chainId: agentChainId,
+    });
 
     try {
       const res = await fetch(`/api/agents/${agentId}/reviews/confirm`, {
@@ -81,19 +98,21 @@ export function EnableReviewsModal({
           txHash: hash,
           chainId: agentChainId,
         }),
+        keepalive: true,
       });
 
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || 'Failed to confirm');
-      }
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to confirm');
 
+      // Success - clear pending and update state
+      clearPending('enable_reviews');
       setPhase('success');
       onSuccess();
-    } catch {
-      // Even if confirm fails, the tx succeeded - just show success
-      setPhase('success');
-      onSuccess();
+    } catch (err) {
+      // Store has the pending tx - will auto-retry on page load
+      console.error('Enable reviews confirm failed:', err);
+      setError('Sync failed. Close and refresh to retry automatically.');
+      setPhase('error');
     }
   };
 

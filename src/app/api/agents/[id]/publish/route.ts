@@ -68,7 +68,8 @@ export async function POST(
 
   try {
     // Build AgentCard metadata
-    const agentCard = buildAgentCard(agent, auth.address);
+    const ownerHandle = (agent.users as { handle: string | null } | null)?.handle || auth.address;
+    const agentCard = buildAgentCard(agent, auth.address, ownerHandle);
 
     // The tokenURI where the AgentCard will be served
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://agentokratia.com';

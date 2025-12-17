@@ -46,17 +46,22 @@ export const authApi = {
 
   async verify(
     message: string,
-    signature: string
-  ): Promise<{ token: string; walletAddress: string }> {
+    signature: string,
+    email?: string,
+    handle?: string
+  ): Promise<{ token: string; walletAddress: string; handle?: string }> {
     const res = await fetch('/api/auth/verify', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message, signature }),
+      body: JSON.stringify({ message, signature, email, handle }),
     });
 
     if (!res.ok) {
       const error = await res.json();
-      throw new Error(error.error || 'Verification failed');
+      // Include error code for special handling
+      const err = new Error(error.error || 'Verification failed') as Error & { code?: string };
+      err.code = error.code;
+      throw err;
     }
 
     const data = await res.json();

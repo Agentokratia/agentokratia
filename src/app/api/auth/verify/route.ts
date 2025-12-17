@@ -4,6 +4,7 @@ import { createPublicClient, http } from 'viem';
 import { base, baseSepolia } from 'viem/chains';
 import { supabaseAdmin, DbUser, DbAuthNonce } from '@/lib/db/supabase';
 import { createToken, hashToken, getTokenExpiration } from '@/lib/auth/jwt';
+import { validateHandle } from '@/lib/utils/slugify';
 
 // Get the appropriate chain for verification
 function getChain(chainId: number) {
@@ -19,7 +20,7 @@ function getChain(chainId: number) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { message, signature } = await request.json();
+    const { message, signature, email, handle } = await request.json();
 
     if (!message || !signature) {
       return NextResponse.json(
@@ -86,12 +87,6 @@ export async function POST(request: NextRequest) {
 
     const nonceData = nonceRecord as DbAuthNonce;
 
-    // Mark nonce as used
-    await supabaseAdmin
-      .from('auth_nonces')
-      .update({ used_at: new Date().toISOString(), wallet_address: normalizedAddress })
-      .eq('id', nonceData.id);
-
     // Find or create user
     const { data: existingUser } = await supabaseAdmin
       .from('users')
@@ -102,11 +97,73 @@ export async function POST(request: NextRequest) {
     let user: DbUser;
 
     if (!existingUser) {
-      // Create new user
+      // NEW USER - require whitelisted email and handle
+      if (!email || !handle) {
+        return NextResponse.json(
+          { error: 'Email and handle required for registration', code: 'EMAIL_REQUIRED' },
+          { status: 403 }
+        );
+      }
+
+      const normalizedEmail = email.toLowerCase().trim();
+      const normalizedHandle = handle.toLowerCase().trim();
+
+      // Validate handle format
+      const handleValidation = validateHandle(normalizedHandle);
+      if (!handleValidation.valid) {
+        return NextResponse.json(
+          { error: handleValidation.error, code: 'INVALID_HANDLE' },
+          { status: 400 }
+        );
+      }
+
+      // Check handle uniqueness
+      const { data: existingHandle } = await supabaseAdmin
+        .from('users')
+        .select('id')
+        .eq('handle', normalizedHandle)
+        .single();
+
+      if (existingHandle) {
+        return NextResponse.json(
+          { error: 'Handle already taken', code: 'HANDLE_TAKEN' },
+          { status: 400 }
+        );
+      }
+
+      // Check whitelist
+      const { data: invite } = await supabaseAdmin
+        .from('whitelist_invites')
+        .select('*')
+        .eq('email', normalizedEmail)
+        .is('claimed_by', null)
+        .single();
+
+      if (!invite) {
+        return NextResponse.json(
+          { error: 'Email not on whitelist', code: 'EMAIL_NOT_WHITELISTED' },
+          { status: 403 }
+        );
+      }
+
+      // Check invite not expired
+      if (invite.expires_at && new Date(invite.expires_at) < new Date()) {
+        return NextResponse.json(
+          { error: 'Invite expired', code: 'INVITE_EXPIRED' },
+          { status: 403 }
+        );
+      }
+
+      // Create user with whitelist status and handle
       const { data: newUser, error: createError } = await supabaseAdmin
         .from('users')
         .insert({
           wallet_address: normalizedAddress,
+          email: normalizedEmail,
+          handle: normalizedHandle,
+          is_whitelisted: true,
+          whitelisted_at: new Date().toISOString(),
+          invited_by: invite.invited_by,
         })
         .select()
         .single();
@@ -119,10 +176,25 @@ export async function POST(request: NextRequest) {
         );
       }
 
+      // Mark invite as claimed
+      await supabaseAdmin
+        .from('whitelist_invites')
+        .update({
+          claimed_by: newUser.id,
+          claimed_at: new Date().toISOString(),
+        })
+        .eq('id', invite.id);
+
       user = newUser as DbUser;
     } else {
       user = existingUser as DbUser;
     }
+
+    // Mark nonce as used only after successful authentication
+    await supabaseAdmin
+      .from('auth_nonces')
+      .update({ used_at: new Date().toISOString(), wallet_address: normalizedAddress })
+      .eq('id', nonceData.id);
 
     // Create JWT token
     const token = await createToken(user.id, normalizedAddress);

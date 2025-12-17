@@ -180,6 +180,9 @@ export function useReviewsEnabled(
     scopeKey: feedbackSignerAddress ?? undefined,
     query: {
       enabled: shouldQuery,
+      // Don't cache - always check fresh on-chain state
+      staleTime: 0,
+      gcTime: 0,
     },
   });
 

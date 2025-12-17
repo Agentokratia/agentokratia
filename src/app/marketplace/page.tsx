@@ -21,6 +21,7 @@ const categoryDisplayMap: Record<string, string> = {
 interface MarketplaceAgent {
   id: string;
   name: string;
+  slug: string;
   description: string | null;
   category: string;
   pricePerCall: number;
@@ -147,7 +148,7 @@ export default function MarketplacePage() {
               {filteredAgents.map((agent) => (
                 <Link
                   key={agent.id}
-                  href={`/marketplace/${agent.id}`}
+                  href={`/${agent.ownerHandle}/${agent.slug}`}
                   className={styles.card}
                 >
                   <div className={styles.cardTop}>

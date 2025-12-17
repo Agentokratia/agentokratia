@@ -30,11 +30,12 @@ export interface X402Response<T = unknown> {
 
 // Main function to call an agent with x402 payment
 export async function callAgentWithPayment<T = unknown>(
-  agentId: string,
+  handle: string,
+  slug: string,
   body: unknown,
   createPaymentPayload?: (paymentRequired: PaymentRequired) => Promise<PaymentPayload>
 ): Promise<X402Response<T>> {
-  const url = `/api/v1/call/${agentId}`;
+  const url = `/api/v1/call/${handle}/${slug}`;
 
   // First request - will return 402 if payment required
   const initialResponse = await fetch(url, {

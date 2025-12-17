@@ -2,17 +2,19 @@
 
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Loader2, Shield, ShieldCheck, Star, X, Zap, Clock, Activity, AlertCircle, Play, Check, Copy, ExternalLink, Code, FileText, MessageSquare, Share2, User } from 'lucide-react';
+import { ArrowLeft, Loader2, Shield, ShieldCheck, Star, X, Zap, Clock, Activity, AlertCircle, Play, Check, Copy, ExternalLink, Code, FileText, MessageSquare, Share2, User, Download } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { Button } from '@/components/ui';
 import { PublicHeader, PublicFooter } from '@/components/layout';
 import { ApiPlayground } from '@/components/marketplace/ApiPlayground';
 import { ReviewsList } from '@/components/marketplace/ReviewsList/ReviewsList';
-import { formatUsdc, formatCompactNumber, shortenAddress } from '@/lib/utils/format';
+import { formatUsdc, formatCompactNumber } from '@/lib/utils/format';
 import { ROUTES } from '@/lib/utils/constants';
 import { useAllNetworks, getExplorerUrlForChain } from '@/lib/network/client';
+import { usePendingTransactionRetryByType } from '@/hooks';
 import styles from './page.module.css';
 
 interface ReviewStats {
@@ -25,6 +27,7 @@ interface ReviewStats {
 interface MarketplaceAgentDetail {
   id: string;
   name: string;
+  slug: string;
   description: string | null;
   category: string;
   pricePerCall: number;
@@ -32,7 +35,7 @@ interface MarketplaceAgentDetail {
   tags: string[] | null;
   readme: string | null;
   ownerId: string;
-  ownerHandle: string | null;
+  ownerHandle: string;
   ownerName: string | null;
   inputSchema: object | null;
   outputSchema: object | null;
@@ -41,6 +44,7 @@ interface MarketplaceAgentDetail {
   erc8004TokenId: string | null;
   erc8004TxHash: string | null;
   erc8004ChainId: number | null;
+  reviewsEnabled: boolean;
   stats?: { uptime: number; avgResponseMs: number; errorRate: number; };
   reviewStats?: ReviewStats;
 }
@@ -48,8 +52,8 @@ interface MarketplaceAgentDetail {
 type CodeLang = 'js' | 'py' | 'curl';
 type TabId = 'readme' | 'api' | 'reviews';
 
-async function fetchMarketplaceAgent(id: string): Promise<MarketplaceAgentDetail> {
-  const res = await fetch(`/api/marketplace/${id}`);
+async function fetchMarketplaceAgent(handle: string, slug: string): Promise<MarketplaceAgentDetail> {
+  const res = await fetch(`/api/marketplace/${handle}/${slug}`);
   if (!res.ok) {
     if (res.status === 404) throw new Error('Agent not found');
     throw new Error('Failed to fetch agent');
@@ -57,8 +61,11 @@ async function fetchMarketplaceAgent(id: string): Promise<MarketplaceAgentDetail
   return (await res.json()).agent;
 }
 
-export default function ApiDetailPage() {
+export default function AgentDetailPage() {
   const params = useParams();
+  const handle = params.handle as string;
+  const slug = params.slug as string;
+
   const { data: networks } = useAllNetworks();
   const [activeTab, setActiveTab] = useState<TabId>('readme');
   const [codeLang, setCodeLang] = useState<CodeLang>('js');
@@ -66,12 +73,19 @@ export default function ApiDetailPage() {
   const [copied, setCopied] = useState(false);
   const [copiedEndpoint, setCopiedEndpoint] = useState(false);
   const [copiedShare, setCopiedShare] = useState(false);
+  const [copiedInput, setCopiedInput] = useState(false);
+  const [copiedOutput, setCopiedOutput] = useState(false);
 
-  const { data: agent, isLoading, error } = useQuery({
-    queryKey: ['marketplace-agent', params.id],
-    queryFn: () => fetchMarketplaceAgent(params.id as string),
-    enabled: !!params.id,
+  const { data: agent, isLoading, error, refetch: refetchAgent } = useQuery({
+    queryKey: ['agent', handle, slug],
+    queryFn: () => fetchMarketplaceAgent(handle, slug),
+    enabled: !!handle && !!slug,
     staleTime: 30_000,
+  });
+
+  // Auto-retry pending review confirmations on page load
+  usePendingTransactionRetryByType('review', () => {
+    refetchAgent();
   });
 
   useEffect(() => {
@@ -91,6 +105,10 @@ export default function ApiDetailPage() {
     setIsPlaygroundOpen(false);
   }, []);
 
+  // Endpoint uses handle/slug format
+  const apiBaseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://agentokratia.com';
+  const endpoint = agent ? `${apiBaseUrl}/api/v1/call/${handle}/${slug}` : '';
+
   const copyCode = () => {
     if (!agent) return;
     navigator.clipboard.writeText(fullCodeExamples[codeLang]);
@@ -100,7 +118,7 @@ export default function ApiDetailPage() {
 
   const copyEndpoint = () => {
     if (!agent) return;
-    navigator.clipboard.writeText(`https://api.agentokratia.com/call/${agent.id}`);
+    navigator.clipboard.writeText(endpoint);
     setCopiedEndpoint(true);
     setTimeout(() => setCopiedEndpoint(false), 2000);
   };
@@ -110,6 +128,74 @@ export default function ApiDetailPage() {
     navigator.clipboard.writeText(url);
     setCopiedShare(true);
     setTimeout(() => setCopiedShare(false), 2000);
+  };
+
+  const copyInputSchema = () => {
+    if (!agent?.inputSchema) return;
+    navigator.clipboard.writeText(JSON.stringify(agent.inputSchema, null, 2));
+    setCopiedInput(true);
+    setTimeout(() => setCopiedInput(false), 2000);
+  };
+
+  const copyOutputSchema = () => {
+    if (!agent?.outputSchema) return;
+    navigator.clipboard.writeText(JSON.stringify(agent.outputSchema, null, 2));
+    setCopiedOutput(true);
+    setTimeout(() => setCopiedOutput(false), 2000);
+  };
+
+  const generateOpenApiSpec = () => {
+    if (!agent) return null;
+    return {
+      openapi: '3.0.3',
+      info: {
+        title: agent.name,
+        description: agent.description || '',
+        version: '1.0.0',
+      },
+      servers: [{ url: apiBaseUrl }],
+      paths: {
+        [`/api/v1/call/${handle}/${slug}`]: {
+          post: {
+            summary: agent.name,
+            description: agent.description || '',
+            requestBody: agent.inputSchema ? {
+              required: true,
+              content: {
+                'application/json': {
+                  schema: agent.inputSchema,
+                },
+              },
+            } : undefined,
+            responses: {
+              '200': {
+                description: 'Successful response',
+                content: agent.outputSchema ? {
+                  'application/json': {
+                    schema: agent.outputSchema,
+                  },
+                } : undefined,
+              },
+              '402': {
+                description: 'Payment required - see x402 protocol',
+              },
+            },
+          },
+        },
+      },
+    };
+  };
+
+  const downloadOpenApiSpec = () => {
+    const spec = generateOpenApiSpec();
+    if (!spec) return;
+    const blob = new Blob([JSON.stringify(spec, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${slug}-openapi.json`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   if (isLoading) {
@@ -139,35 +225,42 @@ export default function ApiDetailPage() {
     );
   }
 
-  const endpoint = `https://api.agentokratia.com/call/${agent.id}`;
   const reviewCount = agent.reviewStats?.reviewCount ?? 0;
   const avgRating = agent.reviewStats?.avgRating ?? 0;
 
   const fullCodeExamples: Record<CodeLang, string> = {
-    js: `import { withPaymentInterceptor } from "x402-axios";
+    js: `// Install: npm install @x402/axios @x402/evm viem
+
 import axios from "axios";
+import { wrapAxiosWithPayment, x402Client } from "@x402/axios";
+import { ExactEvmScheme } from "@x402/evm";
+import { privateKeyToAccount } from "viem/accounts";
 
-const api = withPaymentInterceptor(
-  axios.create({ baseURL: "https://api.agentokratia.com" }),
-  privateKeyToAccount(process.env.WALLET_KEY)
-);
+const account = privateKeyToAccount(process.env.WALLET_KEY);
+const client = new x402Client().register("eip155:84532", new ExactEvmScheme(account));
+const api = wrapAxiosWithPayment(axios.create(), client);
 
-const { data } = await api.post("/call/${agent.id}", {
+const { data } = await api.post("${endpoint}", {
   // your parameters
 });`,
-    py: `from x402.clients.requests import x402_requests
+    py: `# Install: pip install x402-client
+
 from eth_account import Account
+from x402_client import X402AsyncClient
 
-session = x402_requests(Account.from_key(WALLET_KEY))
+account = Account.from_key(WALLET_KEY)
 
-response = session.post(
-    "https://api.agentokratia.com/call/${agent.id}",
-    json={"your": "params"}
-)`,
-    curl: `curl -X POST "https://api.agentokratia.com/call/${agent.id}" \\
+async with X402AsyncClient(account=account) as client:
+    response = await client.post("${endpoint}", json={"your": "params"})`,
+    curl: `# Manual request (for testing)
+# The payment-signature header requires a signed payment payload
+
+curl -X POST "${endpoint}" \\
   -H "Content-Type: application/json" \\
-  -H "X-Payment: <proof>" \\
-  -d '{"your": "params"}'`
+  -d '{"your": "params"}'
+
+# Without a valid payment, you'll receive a 402 response
+# with payment details in the "payment-required" header`
   };
 
   const tabs: { id: TabId; label: string; icon: React.ReactNode }[] = [
@@ -218,13 +311,13 @@ response = session.post(
           <div className={styles.authorCard}>
             <span className={styles.cardLabel}>Developer</span>
             <Link
-              href={agent.ownerHandle ? `/creator/${agent.ownerHandle}` : `/creator/${agent.ownerId}`}
+              href={`/creator/${agent.ownerHandle}`}
               className={styles.authorLink}
             >
               <div className={styles.authorAvatar}>
                 <User size={16} />
               </div>
-              <span>{agent.ownerHandle ? `@${agent.ownerHandle}` : agent.ownerName || shortenAddress(agent.ownerId)}</span>
+              <span>@{agent.ownerHandle}</span>
             </Link>
           </div>
 
@@ -291,24 +384,36 @@ response = session.post(
             )}
 
             {/* Reviews Status */}
-            {reviewCount > 0 ? (
-              <div className={styles.trustItem}>
-                <div className={styles.trustIconActive}>
-                  <MessageSquare size={14} />
+            {agent.reviewsEnabled ? (
+              reviewCount > 0 ? (
+                <div className={styles.trustItem}>
+                  <div className={styles.trustIconActive}>
+                    <MessageSquare size={14} />
+                  </div>
+                  <div className={styles.trustContent}>
+                    <span className={styles.trustTitle}>Reviews Enabled</span>
+                    <span className={styles.trustDesc}>{reviewCount} verified user reviews</span>
+                  </div>
                 </div>
-                <div className={styles.trustContent}>
-                  <span className={styles.trustTitle}>Reviews Enabled</span>
-                  <span className={styles.trustDesc}>{reviewCount} verified user reviews</span>
+              ) : (
+                <div className={styles.trustItem}>
+                  <div className={styles.trustIconActive}>
+                    <MessageSquare size={14} />
+                  </div>
+                  <div className={styles.trustContent}>
+                    <span className={styles.trustTitle}>Reviews Enabled</span>
+                    <span className={styles.trustDesc}>Be the first to review</span>
+                  </div>
                 </div>
-              </div>
+              )
             ) : (
               <div className={styles.trustItem}>
                 <div className={styles.trustIconInactive}>
                   <MessageSquare size={14} />
                 </div>
                 <div className={styles.trustContent}>
-                  <span className={styles.trustTitleMuted}>No Reviews Yet</span>
-                  <span className={styles.trustDesc}>Be the first to review</span>
+                  <span className={styles.trustTitleMuted}>Reviews Not Available</span>
+                  <span className={styles.trustDesc}>Agent owner has not enabled reviews</span>
                 </div>
               </div>
             )}
@@ -349,7 +454,7 @@ response = session.post(
               <div className={styles.readmeTab}>
                 {agent.readme ? (
                   <div className={styles.readme}>
-                    <ReactMarkdown>{agent.readme}</ReactMarkdown>
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{agent.readme}</ReactMarkdown>
                   </div>
                 ) : (
                   <div className={styles.noContent}>
@@ -375,22 +480,21 @@ response = session.post(
             {/* API Tab */}
             {activeTab === 'api' && (
               <div className={styles.apiTab}>
-                {/* Quick Start */}
-                <div className={styles.quickStart}>
-                  <h3>Quick Start</h3>
-                  <div className={styles.installBox}>
-                    <code>npm i x402-axios</code>
-                    <span className={styles.or}>or</span>
-                    <code>pip install x402</code>
-                  </div>
+                {/* Integration Guide */}
+                <div className={styles.integrationHeader}>
+                  <h3>Integrate in 2 minutes</h3>
+                  <ol className={styles.integrationSteps}>
+                    <li>Install an HTTP client with <a href="https://www.x402.org" target="_blank" rel="noopener noreferrer">x402</a> support (see Node.js and Python examples below)</li>
+                    <li>Add your wallet private key (needs USDC on Base)</li>
+                    <li>Send a POST request to the endpoint below - you only pay when it succeeds</li>
+                  </ol>
                 </div>
 
                 {/* Endpoint */}
-                <div className={styles.apiSection}>
-                  <h3>Endpoint</h3>
-                  <div className={styles.endpointBox}>
+                <div className={styles.endpointSection}>
+                  <div className={styles.endpointRow}>
                     <span className={styles.method}>POST</span>
-                    <code>{endpoint}</code>
+                    <code className={styles.endpointUrl}>{endpoint}</code>
                     <button onClick={copyEndpoint} className={styles.copyBtn}>
                       {copiedEndpoint ? <Check size={14} /> : <Copy size={14} />}
                     </button>
@@ -399,7 +503,7 @@ response = session.post(
 
                 {/* Code Examples */}
                 <div className={styles.apiSection}>
-                  <h3>Example</h3>
+                  <h3>Code</h3>
                   <div className={styles.codeCard}>
                     <div className={styles.codeTabs}>
                       {(['js', 'py', 'curl'] as const).map((lang) => (
@@ -418,24 +522,61 @@ response = session.post(
                         {copied ? <Check size={14} /> : <Copy size={14} />}
                       </button>
                     </div>
+                    {codeLang !== 'curl' && (
+                      <div className={styles.codeFooter}>
+                        <a
+                          href={codeLang === 'js'
+                            ? 'https://github.com/Agentokratia/quickstart-example'
+                            : 'https://github.com/Agentokratia/quickstart-example-python'
+                          }
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={styles.quickstartLink}
+                        >
+                          <ExternalLink size={14} />
+                          View full example on GitHub
+                        </a>
+                      </div>
+                    )}
                   </div>
                 </div>
 
                 {/* Schemas */}
-                {agent.inputSchema && (
+                {(agent.inputSchema || agent.outputSchema) && (
                   <div className={styles.apiSection}>
-                    <h3>Input Schema</h3>
-                    <div className={styles.schemaBox}>
-                      <pre>{JSON.stringify(agent.inputSchema, null, 2)}</pre>
+                    <div className={styles.sectionHeader}>
+                      <h3>Schemas</h3>
+                      <button className={styles.specBtn} onClick={downloadOpenApiSpec}>
+                        <Download size={14} /> OpenAPI
+                      </button>
                     </div>
-                  </div>
-                )}
-
-                {agent.outputSchema && (
-                  <div className={styles.apiSection}>
-                    <h3>Output Schema</h3>
-                    <div className={styles.schemaBox}>
-                      <pre>{JSON.stringify(agent.outputSchema, null, 2)}</pre>
+                    <div className={styles.schemaGrid}>
+                      {agent.inputSchema && (
+                        <div className={styles.schemaCard}>
+                          <div className={styles.schemaHeader}>
+                            <span className={styles.schemaLabel}>Request Body</span>
+                            <button className={styles.schemaCopyBtn} onClick={copyInputSchema}>
+                              {copiedInput ? <><Check size={12} /> Copied</> : <><Copy size={12} /> Copy</>}
+                            </button>
+                          </div>
+                          <div className={styles.schemaBox}>
+                            <pre>{JSON.stringify(agent.inputSchema, null, 2)}</pre>
+                          </div>
+                        </div>
+                      )}
+                      {agent.outputSchema && (
+                        <div className={styles.schemaCard}>
+                          <div className={styles.schemaHeader}>
+                            <span className={styles.schemaLabel}>Response</span>
+                            <button className={styles.schemaCopyBtn} onClick={copyOutputSchema}>
+                              {copiedOutput ? <><Check size={12} /> Copied</> : <><Copy size={12} /> Copy</>}
+                            </button>
+                          </div>
+                          <div className={styles.schemaBox}>
+                            <pre>{JSON.stringify(agent.outputSchema, null, 2)}</pre>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
@@ -480,7 +621,8 @@ response = session.post(
                 )}
 
                 <ReviewsList
-                  agentId={agent.id}
+                  ownerHandle={handle}
+                  agentSlug={slug}
                   chainId={agent.erc8004ChainId}
                   blockExplorerUrl={
                     networks?.find((n) => n.chainId === agent.erc8004ChainId)?.blockExplorerUrl
@@ -512,7 +654,8 @@ response = session.post(
             </div>
             <div className={styles.panelBody}>
               <ApiPlayground
-                agentId={agent.id}
+                ownerHandle={handle}
+                agentSlug={slug}
                 agentName={agent.name}
                 pricePerCall={agent.pricePerCall}
                 inputSchema={agent.inputSchema as Record<string, unknown> | null}

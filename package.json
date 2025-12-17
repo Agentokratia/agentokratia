@@ -33,6 +33,7 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
     "siwe": "^2.3.2",
     "viem": "^2.21.9",
     "wagmi": "^2.12.12",

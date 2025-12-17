@@ -21,7 +21,8 @@ export interface AgentCard {
 // Build AgentCard metadata from database agent
 export function buildAgentCard(
   agent: DbAgent,
-  ownerAddress: string
+  ownerAddress: string,
+  ownerHandle: string
 ): AgentCard {
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://agentokratia.com';
 
@@ -31,8 +32,8 @@ export function buildAgentCard(
     image: agent.icon_url || `${baseUrl}/agents/${agent.id}/icon.png`,
     category: agent.category,
     owner: ownerAddress,
-    endpoint: `${baseUrl}/api/v1/agents/${agent.id}`,
+    endpoint: `${baseUrl}/api/v1/call/${ownerHandle}/${agent.slug}`,
     pricePerCall: centsToDollars(agent.price_per_call),
-    externalUrl: `${baseUrl}/marketplace/${agent.id}`,
+    externalUrl: `${baseUrl}/${ownerHandle}/${agent.slug}`,
   };
 }

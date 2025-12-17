@@ -49,3 +49,6 @@ coverage/
 .supabase/
 supabase/.temp/
 supabase/.branches/
+.vercel
+.env*.local
+*.local.bak

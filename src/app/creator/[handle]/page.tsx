@@ -14,6 +14,7 @@ import styles from './page.module.css';
 interface CreatorAgent {
   id: string;
   name: string;
+  slug: string;
   description: string | null;
   category: string;
   pricePerCall: number;
@@ -199,7 +200,7 @@ export default function CreatorProfilePage() {
               {profile.agents.map((agent) => (
                 <Link
                   key={agent.id}
-                  href={`/marketplace/${agent.id}`}
+                  href={`/${handle}/${agent.slug}`}
                   className={styles.agentCard}
                 >
                   <div className={styles.cardHeader}>

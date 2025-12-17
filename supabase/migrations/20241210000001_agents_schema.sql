@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS agents (
 
   -- Basic info
   name VARCHAR(100) NOT NULL,
+  slug VARCHAR(100) NOT NULL,
   description TEXT,
   category agent_category NOT NULL DEFAULT 'other',
 
@@ -75,7 +76,8 @@ CREATE TABLE IF NOT EXISTS agents (
 
   -- Constraints
   CONSTRAINT price_positive CHECK (price_per_call > 0),
-  CONSTRAINT timeout_range CHECK (timeout_ms >= 1000 AND timeout_ms <= 300000)
+  CONSTRAINT timeout_range CHECK (timeout_ms >= 1000 AND timeout_ms <= 300000),
+  CONSTRAINT unique_owner_slug UNIQUE (owner_id, slug)
 );
 
 -- =============================================

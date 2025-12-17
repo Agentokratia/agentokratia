@@ -7,10 +7,12 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui';
 import { REPUTATION_REGISTRY_ABI, FEEDBACK_TAGS } from '@/lib/erc8004/contracts';
 import { useNetworkConfig, getExplorerTxUrl } from '@/lib/network/client';
+import { usePendingTransactionStore } from '@/lib/store';
 import styles from './ReviewForm.module.css';
 
 interface ReviewFormProps {
-  agentId: string;
+  ownerHandle: string;
+  agentSlug: string;
   tokenId: string;
   feedbackAuth: string;
   feedbackExpiry: string;
@@ -37,7 +39,8 @@ const TAGS = Object.keys(FEEDBACK_TAGS)
   .map((id) => ({ id, label: TAG_LABELS[id] }));
 
 export function ReviewForm({
-  agentId,
+  ownerHandle,
+  agentSlug,
   tokenId,
   feedbackAuth,
   feedbackExpiry,
@@ -48,6 +51,7 @@ export function ReviewForm({
   const { data: networkConfig } = useNetworkConfig();
   const { writeContractAsync, isPending } = useWriteContract();
   const queryClient = useQueryClient();
+  const { setPending, clearPending } = usePendingTransactionStore();
 
   const [rating, setRating] = useState(0);
   const [hoveredRating, setHoveredRating] = useState(0);
@@ -56,15 +60,8 @@ export function ReviewForm({
   const [txHash, setTxHash] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Auto-close after successful submission
-  useEffect(() => {
-    if (state === 'success') {
-      const timer = setTimeout(() => {
-        onClose();
-      }, 3000); // Close after 3 seconds
-      return () => clearTimeout(timer);
-    }
-  }, [state, onClose]);
+  // Note: We don't auto-close anymore - let user see the success state and dismiss manually
+  // This gives them time to see the confirmation and click "View on Explorer" if they want
 
   // Check if auth is expired
   const isExpired = feedbackExpiry ? Date.now() > parseInt(feedbackExpiry) * 1000 : false;
@@ -86,12 +83,14 @@ export function ReviewForm({
 
     setState('submitting_api');
     setError(null);
+    console.log('[ReviewForm] Starting review submission...');
 
     try {
       const score = scoreFromRating(rating);
 
       // Step 1: Submit review to API to get fileuri and filehash
-      const apiResponse = await fetch(`/api/marketplace/${agentId}/reviews`, {
+      console.log('[ReviewForm] Step 1: Creating review via POST...');
+      const apiResponse = await fetch(`/api/marketplace/${ownerHandle}/${agentSlug}/reviews`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -107,10 +106,12 @@ export function ReviewForm({
         throw new Error(errData.error || 'Failed to create review');
       }
 
-      const { onchain } = await apiResponse.json();
+      const { review, onchain } = await apiResponse.json();
+      console.log('[ReviewForm] Step 1 complete. Review ID:', review.id);
 
       // Step 2: Submit on-chain with proper fileuri/filehash from API
       setState('submitting_chain');
+      console.log('[ReviewForm] Step 2: Submitting on-chain transaction...');
 
       const hash = await writeContractAsync({
         address: networkConfig.reputationRegistryAddress as `0x${string}`,
@@ -128,13 +129,50 @@ export function ReviewForm({
       });
 
       setTxHash(hash);
+      console.log('[ReviewForm] Step 2 complete. TxHash:', hash);
+
+      // Step 3: Save txHash to database - store pattern for reliability
+      // Save to store BEFORE API call - survives browser crashes
+      console.log('[ReviewForm] Step 3: Saving txHash via PATCH...');
+      setPending({
+        type: 'review',
+        reviewId: review.id,
+        txHash: hash,
+        chainId: networkConfig.chainId,
+        ownerHandle,
+        agentSlug,
+      });
+
+      try {
+        const confirmRes = await fetch(`/api/marketplace/${ownerHandle}/${agentSlug}/reviews`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reviewId: review.id, txHash: hash, chainId: networkConfig.chainId }),
+          keepalive: true,
+        });
+
+        console.log('[ReviewForm] PATCH response status:', confirmRes.status);
+        if (confirmRes.ok) {
+          clearPending('review');
+          console.log('[ReviewForm] PATCH successful, cleared pending');
+        } else {
+          const errText = await confirmRes.text();
+          console.error('[ReviewForm] PATCH failed:', confirmRes.status, errText);
+        }
+        // On failure, store has pending tx - will auto-retry on page load
+      } catch (e) {
+        console.warn('[ReviewForm] Failed to save review txHash, will retry on refresh:', e);
+      }
+
       setState('success');
+      console.log('[ReviewForm] Review submission complete!');
 
       // Invalidate queries to refresh reviews list and agent stats
-      queryClient.invalidateQueries({ queryKey: ['reviews', agentId] });
-      queryClient.invalidateQueries({ queryKey: ['marketplace-agent', agentId] });
+      queryClient.invalidateQueries({ queryKey: ['reviews', ownerHandle, agentSlug] });
+      queryClient.invalidateQueries({ queryKey: ['agent', ownerHandle, agentSlug] });
 
-      onSuccess?.();
+      // Note: onSuccess is called when user clicks "Done" button, not here
+      // This lets user see the success confirmation first
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to submit review';
       if (message.includes('rejected') || message.includes('User rejected')) {
@@ -144,7 +182,7 @@ export function ReviewForm({
         setState('error');
       }
     }
-  }, [rating, address, networkConfig, tokenId, agentId, selectedTags, feedbackAuth, writeContractAsync, onSuccess]);
+  }, [rating, address, networkConfig, tokenId, ownerHandle, agentSlug, selectedTags, feedbackAuth, writeContractAsync, queryClient, onSuccess]);
 
   // Expired auth
   if (isExpired) {
@@ -166,6 +204,11 @@ export function ReviewForm({
 
   // Success state
   if (state === 'success') {
+    const handleDone = () => {
+      onSuccess?.();
+      onClose();
+    };
+
     return (
       <div className={styles.container}>
         <div className={styles.successContent}>
@@ -186,8 +229,8 @@ export function ReviewForm({
               View on Explorer
             </a>
           )}
-          <Button onClick={onClose} variant="outline" size="sm">
-            Close
+          <Button onClick={handleDone} size="sm">
+            Done
           </Button>
         </div>
       </div>

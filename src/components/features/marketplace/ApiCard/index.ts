@@ -1,1 +1,0 @@
-export { ApiCard } from './ApiCard';

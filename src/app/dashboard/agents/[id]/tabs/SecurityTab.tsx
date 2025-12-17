@@ -116,7 +116,8 @@ export default function SecurityTab({ agent, onToast }: Props) {
     : '';
 
   const getProxyConfig = () => {
-    const secret = secretKey?.secret || 'YOUR_SECRET_KEY';
+    // Only show real secret when showSecret is true, otherwise use placeholder
+    const secret = showSecret && secretKey?.secret ? secretKey.secret : '<YOUR_SECRET_KEY>';
 
     const configs: Record<ProxyType, string> = {
       nginx: `location / {
@@ -158,83 +159,42 @@ backend denied
   };
 
   const getCodeSnippet = () => {
-    const secret = secretKey?.secret || 'YOUR_SECRET_KEY';
+    // Only show real secret when showSecret is true, otherwise use placeholder
+    const secret = showSecret && secretKey?.secret ? secretKey.secret : '<YOUR_SECRET_KEY>';
 
     const snippets: Record<CodeType, string> = {
-      nextjs: `// middleware.ts (project root)
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
-
-export function middleware(request: NextRequest) {
-  // Protect YOUR endpoint that Agentokratia will call
-  if (request.nextUrl.pathname.startsWith('/api/my-service')) {
-    const secret = request.headers.get('X-Agentokratia-Secret');
-    if (secret !== process.env.AGENTOKRATIA_SECRET) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
-    }
-  }
-  return NextResponse.next();
+      nextjs: `// Add these 3 lines to your API route
+const secret = request.headers.get('X-Agentokratia-Secret');
+if (secret !== process.env.AGENTOKRATIA_SECRET) {
+  return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
 }
-
-export const config = { matcher: '/api/my-service/:path*' };
 
 // .env.local
 AGENTOKRATIA_SECRET=${secret}`,
 
-      express: `// Express middleware
-const verifyAgentokratia = (req, res, next) => {
-  const secret = req.headers['x-agentokratia-secret'];
-  if (secret !== process.env.AGENTOKRATIA_SECRET) {
-    return res.status(403).json({ error: 'Unauthorized' });
-  }
-  next();
-};
-
-// Protect YOUR endpoint that Agentokratia will call
-app.post('/api/my-service', verifyAgentokratia, yourHandler);
+      express: `// Add these 3 lines to your route handler
+const secret = req.headers['x-agentokratia-secret'];
+if (secret !== process.env.AGENTOKRATIA_SECRET) {
+  return res.status(403).json({ error: 'Unauthorized' });
+}
 
 // .env
 AGENTOKRATIA_SECRET=${secret}`,
 
-      cloudflare: `// Cloudflare Worker
-// Protect YOUR endpoint that Agentokratia will call
-export default {
-  async fetch(request, env) {
-    const secret = request.headers.get('X-Agentokratia-Secret');
-    if (secret !== env.AGENTOKRATIA_SECRET) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 403,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
+      cloudflare: `// Add these 3 lines to your Worker
+const secret = request.headers.get('X-Agentokratia-Secret');
+if (secret !== env.AGENTOKRATIA_SECRET) {
+  return new Response('Unauthorized', { status: 403 });
+}
 
-    // Your service logic here
-    return new Response(JSON.stringify({ result: 'ok' }));
-  }
-};
+// wrangler secret put AGENTOKRATIA_SECRET
+// Value: ${secret}`,
 
-// wrangler.toml - add secret via:
-// wrangler secret put AGENTOKRATIA_SECRET`,
-
-      lambda: `// AWS Lambda handler
-// Protect YOUR endpoint that Agentokratia will call
-export const handler = async (event) => {
-  const secret = event.headers['x-agentokratia-secret']
-    || event.headers['X-Agentokratia-Secret'];
-
-  if (secret !== process.env.AGENTOKRATIA_SECRET) {
-    return {
-      statusCode: 403,
-      body: JSON.stringify({ error: 'Unauthorized' })
-    };
-  }
-
-  // Your service logic here
-  return {
-    statusCode: 200,
-    body: JSON.stringify({ result: 'ok' })
-  };
-};
+      lambda: `// Add these 3 lines to your handler
+const secret = event.headers['x-agentokratia-secret'];
+if (secret !== process.env.AGENTOKRATIA_SECRET) {
+  return { statusCode: 403, body: 'Unauthorized' };
+}
 
 // Environment variable:
 // AGENTOKRATIA_SECRET=${secret}`,
@@ -430,7 +390,7 @@ export const handler = async (event) => {
               <p className={styles.formHint} style={{ marginBottom: '16px' }}>
                 {configMode === 'proxy'
                   ? 'For traditional servers with nginx, caddy, etc. Zero code changes.'
-                  : 'For serverless (Vercel, Lambda, Workers). Add ~5 lines of code.'}
+                  : 'Just 3 lines of code. Copy, paste, done.'}
               </p>
 
               {configMode === 'proxy' ? (
@@ -489,7 +449,7 @@ export const handler = async (event) => {
 
                   <div className={styles.schemaEditor}>
                     <div className={styles.schemaEditorHeader} style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span>{codeType === 'nextjs' ? 'middleware.ts' : codeType === 'express' ? 'server.js' : codeType === 'cloudflare' ? 'worker.js' : 'handler.js'}</span>
+                      <span>3 lines to add</span>
                       <button
                         className={styles.schemaBtn}
                         onClick={() => copyToClipboard(getCodeSnippet(), 'Code copied!')}
@@ -499,7 +459,7 @@ export const handler = async (event) => {
                       </button>
                     </div>
                     <pre className={styles.schemaTextarea} style={{
-                      minHeight: '280px',
+                      minHeight: '140px',
                       overflow: 'auto',
                       whiteSpace: 'pre',
                       padding: '16px'

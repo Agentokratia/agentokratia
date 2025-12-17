@@ -12,7 +12,7 @@ import { createSiweMessage } from '@/lib/auth/siwe';
 import { EXTERNAL_LINKS } from '@/lib/utils/constants';
 import styles from './page.module.css';
 
-type SigningState = 'idle' | 'signing' | 'rejected' | 'error';
+type SigningState = 'idle' | 'signing' | 'rejected' | 'error' | 'email_required';
 
 export default function ConnectPage() {
   const { address, isConnected } = useAccount();
@@ -25,7 +25,11 @@ export default function ConnectPage() {
 
   const [signingState, setSigningState] = useState<SigningState>('idle');
   const [errorMessage, setErrorMessage] = useState<string>('');
+  const [email, setEmail] = useState<string>('');
+  const [handle, setHandle] = useState<string>('');
+  const [pendingAuth, setPendingAuth] = useState<{ message: string; signature: string } | null>(null);
   const isSigningRef = useRef(false);
+  const hasInitiatedRef = useRef(false);
 
   const isAuthenticated = token && walletAddress && walletAddress.toLowerCase() === address?.toLowerCase();
 
@@ -47,12 +51,24 @@ export default function ConnectPage() {
       const siweMessage = createSiweMessage(address, chainId, nonce);
       const message = siweMessage.prepareMessage();
       const signature = await signMessageAsync({ message });
-      const { token: jwtToken, walletAddress: verifiedAddress } = await authApi.verify(message, signature);
-      setAuth(jwtToken, verifiedAddress);
-      router.push('/dashboard');
+
+      try {
+        const { token: jwtToken, walletAddress: verifiedAddress } = await authApi.verify(message, signature);
+        setAuth(jwtToken, verifiedAddress);
+        router.push('/dashboard');
+      } catch (verifyErr: unknown) {
+        const error = verifyErr as Error & { code?: string };
+        if (error.code === 'EMAIL_REQUIRED') {
+          // New user - reuse the same signature for email registration
+          setPendingAuth({ message, signature });
+          setSigningState('email_required');
+        } else {
+          throw verifyErr;
+        }
+      }
     } catch (err: unknown) {
       console.error('SIWE authentication failed:', err);
-      const error = err as Error;
+      const error = err as Error & { code?: string };
       if (error.message?.includes('rejected') || error.message?.includes('denied') || error.message?.includes('User rejected')) {
         setSigningState('rejected');
       } else {
@@ -64,24 +80,66 @@ export default function ConnectPage() {
     }
   }, [address, chainId, signMessageAsync, setAuth, router]);
 
+  const handleEmailSubmit = useCallback(async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!pendingAuth || !email.trim() || !handle.trim()) return;
+
+    setSigningState('signing');
+    setErrorMessage('');
+
+    try {
+      const { token: jwtToken, walletAddress: verifiedAddress } = await authApi.verify(
+        pendingAuth.message,
+        pendingAuth.signature,
+        email.trim(),
+        handle.trim()
+      );
+      setAuth(jwtToken, verifiedAddress);
+      router.push('/dashboard');
+    } catch (err: unknown) {
+      const error = err as Error & { code?: string };
+      if (error.code === 'EMAIL_NOT_WHITELISTED') {
+        setSigningState('email_required');
+        setErrorMessage('This email is not on the whitelist');
+      } else if (error.code === 'INVITE_EXPIRED') {
+        setSigningState('email_required');
+        setErrorMessage('Your invite has expired');
+      } else if (error.code === 'INVALID_HANDLE') {
+        setSigningState('email_required');
+        setErrorMessage(error.message || 'Invalid handle');
+      } else if (error.code === 'HANDLE_TAKEN') {
+        setSigningState('email_required');
+        setErrorMessage('This handle is already taken');
+      } else {
+        setSigningState('error');
+        setErrorMessage(error.message || 'Registration failed');
+      }
+    }
+  }, [pendingAuth, email, handle, setAuth, router]);
+
   useEffect(() => {
     if (isConnected && address && signingState === 'idle') {
       if (isAuthenticated) {
         router.push('/dashboard');
         return;
       }
+      // Prevent double-initiation from React Strict Mode or re-renders
+      if (hasInitiatedRef.current) return;
+      hasInitiatedRef.current = true;
+
       const timer = setTimeout(() => performSiweSign(), 300);
       return () => clearTimeout(timer);
     }
     if (!isConnected) {
       setSigningState('idle');
+      hasInitiatedRef.current = false;
       clearAuth();
     }
   }, [isConnected, address, signingState, performSiweSign, clearAuth, isAuthenticated, router]);
 
   const handleTryAgain = () => {
+    hasInitiatedRef.current = false;
     setSigningState('idle');
-    performSiweSign();
   };
 
   const handleDifferentWallet = () => {
@@ -131,6 +189,55 @@ export default function ConnectPage() {
             <button className={styles.btnPrimary} onClick={handleTryAgain}>Try again</button>
             <button className={styles.btnGhost} onClick={handleDifferentWallet}>Use different wallet</button>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (isConnected && signingState === 'email_required') {
+    return (
+      <div className={styles.pageCentered}>
+        <div className={styles.card}>
+          <Logo size={48} />
+          <h1 className={styles.cardTitle}>Complete registration</h1>
+          <p className={styles.cardDesc}>
+            Choose your handle and enter your whitelisted email
+          </p>
+          {errorMessage && (
+            <p className={styles.cardError}>{errorMessage}</p>
+          )}
+          <form onSubmit={handleEmailSubmit} className={styles.emailForm}>
+            <div className={styles.inputGroup}>
+              <span className={styles.inputPrefix}>@</span>
+              <input
+                type="text"
+                value={handle}
+                onChange={(e) => setHandle(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
+                placeholder="yourhandle"
+                className={styles.handleInput}
+                required
+                autoFocus
+                maxLength={30}
+              />
+            </div>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
+              className={styles.emailInput}
+              required
+            />
+            <button type="submit" className={styles.btnPrimary} disabled={!email.trim() || !handle.trim()}>
+              Continue
+            </button>
+          </form>
+          <p className={styles.cardHint}>
+            Your profile will be at /creator/{handle || 'yourhandle'}
+          </p>
+          <button className={styles.btnGhost} onClick={handleDifferentWallet}>
+            Use different wallet
+          </button>
         </div>
       </div>
     );

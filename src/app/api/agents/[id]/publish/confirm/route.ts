@@ -188,6 +188,19 @@ export async function POST(
         );
       }
 
+      // SECURITY: Verify transaction was sent by the authenticated user
+      const tx = await publicClient.getTransaction({ hash: txHash as `0x${string}` });
+      if (!tx || tx.from.toLowerCase() !== auth.address.toLowerCase()) {
+        console.error('Publish confirm: tx sender mismatch', {
+          txFrom: tx?.from?.toLowerCase(),
+          authAddress: auth.address.toLowerCase(),
+        });
+        return NextResponse.json(
+          { error: 'Transaction sender does not match authenticated user' },
+          { status: 403 }
+        );
+      }
+
       tokenId = parseTokenIdFromLogs(receipt.logs);
     } catch {
       // If client provided a tokenId, verify and use as fallback
@@ -197,9 +210,26 @@ export async function POST(
             hash: txHash as `0x${string}`,
           });
 
-          if (tx) {
-            tokenId = BigInt(clientTokenId);
+          if (!tx) {
+            return NextResponse.json(
+              { error: 'Could not verify transaction. Please try again in a few moments.' },
+              { status: 503 }
+            );
           }
+
+          // SECURITY: Verify transaction was sent by the authenticated user
+          if (tx.from.toLowerCase() !== auth.address.toLowerCase()) {
+            console.error('Publish confirm fallback: tx sender mismatch', {
+              txFrom: tx.from.toLowerCase(),
+              authAddress: auth.address.toLowerCase(),
+            });
+            return NextResponse.json(
+              { error: 'Transaction sender does not match authenticated user' },
+              { status: 403 }
+            );
+          }
+
+          tokenId = BigInt(clientTokenId);
         } catch {
           return NextResponse.json(
             { error: 'Could not verify transaction. Please try again in a few moments.' },
@@ -221,8 +251,8 @@ export async function POST(
       );
     }
 
-    // Update agent with on-chain data
-    const { error: updateError } = await supabaseAdmin
+    // Update agent with on-chain data (atomic - only if not already published)
+    const { data: updatedAgent, error: updateError } = await supabaseAdmin
       .from('agents')
       .update({
         erc8004_token_id: tokenId.toString(),
@@ -231,13 +261,33 @@ export async function POST(
         status: 'live',
         published_at: new Date().toISOString(),
       })
-      .eq('id', id);
+      .eq('id', id)
+      .is('erc8004_token_id', null) // Atomic: only update if not already published
+      .select('erc8004_token_id')
+      .single();
 
-    if (updateError) {
-      console.error('Failed to update agent:', updateError);
+    if (updateError || !updatedAgent) {
+      // Race condition - another request published first, re-check
+      const { data: recheckAgent } = await supabaseAdmin
+        .from('agents')
+        .select('erc8004_token_id, erc8004_tx_hash, erc8004_chain_id')
+        .eq('id', id)
+        .single();
+
+      if (recheckAgent?.erc8004_tx_hash === txHash) {
+        // Same transaction - idempotent success
+        return NextResponse.json({
+          success: true,
+          tokenId: recheckAgent.erc8004_token_id,
+          txHash: recheckAgent.erc8004_tx_hash,
+          chainId: recheckAgent.erc8004_chain_id,
+          idempotent: true,
+        });
+      }
+
       return NextResponse.json(
-        { error: 'Failed to update agent record' },
-        { status: 500 }
+        { error: 'Agent already published with a different transaction' },
+        { status: 409 }
       );
     }
 

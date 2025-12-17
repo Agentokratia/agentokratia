@@ -7,6 +7,7 @@ import { supabaseAdmin, DbAgent } from '@/lib/db/supabase';
 interface MarketplaceAgent {
   id: string;
   name: string;
+  slug: string;
   description: string | null;
   category: string;
   pricePerCall: number;
@@ -21,6 +22,7 @@ function formatMarketplaceAgent(agent: DbAgent & { users?: { handle: string | nu
   return {
     id: agent.id,
     name: agent.name,
+    slug: agent.slug,
     description: agent.description,
     category: agent.category,
     pricePerCall: agent.price_per_call,

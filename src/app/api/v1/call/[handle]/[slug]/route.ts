@@ -16,8 +16,12 @@ const DEFAULT_TIMEOUT_MS = 30_000;
 const MAX_TIMEOUT_MS = 300_000;
 const MAX_REQUEST_SIZE = 10 * 1024 * 1024;
 
-// SSRF protection
+// SSRF protection (bypassed in local dev)
 function isInternalUrl(url: string): boolean {
+  // Allow localhost in development
+  if (process.env.NODE_ENV === 'development' || process.env.NEXT_PUBLIC_APP_URL?.includes('localhost')) {
+    return false;
+  }
   try {
     const h = new URL(url).hostname.toLowerCase();
     if (['localhost', '127.0.0.1', '::1'].includes(h)) return true;
@@ -38,8 +42,8 @@ const SKIP_HEADERS = new Set([
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, X-Payment, Accept',
-  'Access-Control-Expose-Headers': 'X-Payment-Required, X-Payment-Response, X-Agentokratia-Request-Id, X-Feedback-Auth, X-Feedback-Expires',
+  'Access-Control-Allow-Headers': 'Content-Type, Payment-Signature, Accept',
+  'Access-Control-Expose-Headers': 'Payment-Required, Payment-Response, X-Agentokratia-Request-Id, X-Feedback-Auth, X-Feedback-Expires',
 };
 
 // Helpers
@@ -49,10 +53,12 @@ const jsonResponse = (body: object, status: number, headers: Record<string, stri
 const errorResponse = (message: string, status: number, requestId?: string) =>
   jsonResponse({ error: message, ...(requestId && { requestId }) }, status, requestId ? { 'X-Agentokratia-Request-Id': requestId } : {});
 
-async function getAgentWithOwner(agentId: string): Promise<{
+// Look up agent by handle and slug
+async function getAgentByHandleSlug(handle: string, slug: string): Promise<{
   agent: {
     id: string;
     name: string;
+    slug: string;
     endpoint_url: string;
     price_per_call: number;
     timeout_ms: number | null;
@@ -68,13 +74,25 @@ async function getAgentWithOwner(agentId: string): Promise<{
   ownerWallet: string;
   ownerSource: 'onchain' | 'db';
 } | null> {
+  // First find the user by handle
+  const { data: user, error: userError } = await supabaseAdmin
+    .from('users')
+    .select('id, wallet_address')
+    .eq('handle', handle.toLowerCase())
+    .single();
+
+  if (userError || !user) return null;
+
+  // Then find the agent by owner and slug
   const { data, error } = await supabaseAdmin
     .from('agents')
-    .select(`id, name, endpoint_url, price_per_call, timeout_ms, status, owner_id,
+    .select(`id, name, slug, endpoint_url, price_per_call, timeout_ms, status, owner_id,
              agent_secret, erc8004_chain_id, erc8004_token_id,
-             feedback_signer_address, feedback_signer_private_key, feedback_operator_set_at,
-             users!agents_owner_id_fkey(wallet_address)`)
-    .eq('id', agentId).eq('status', 'live').single();
+             feedback_signer_address, feedback_signer_private_key, feedback_operator_set_at`)
+    .eq('owner_id', user.id)
+    .eq('slug', slug.toLowerCase())
+    .eq('status', 'live')
+    .single();
 
   if (error || !data) return null;
 
@@ -84,40 +102,28 @@ async function getAgentWithOwner(agentId: string): Promise<{
   }
 
   // CRITICAL: For on-chain agents, ALWAYS use on-chain owner for payments
-  // This ensures payment goes to the true NFT owner even after transfers
   if (data.erc8004_token_id && data.erc8004_chain_id) {
     const onChainOwner = await getOnChainOwner(data.erc8004_token_id, data.erc8004_chain_id);
     if (onChainOwner) {
       return { agent: data, ownerWallet: onChainOwner, ownerSource: 'onchain' };
     }
-    // If on-chain lookup fails, reject the request - don't fallback to DB
-    // This prevents paying the wrong person
-    console.error('[Proxy] CRITICAL: On-chain owner lookup failed for agent:', agentId);
-    // Throw specific error so caller can return 503 (temporary) vs 404 (not found)
+    console.error('[Proxy] CRITICAL: On-chain owner lookup failed for agent:', data.id);
     throw new Error('ONCHAIN_VERIFICATION_FAILED');
   }
 
-  // Fallback for non-on-chain agents (shouldn't happen for live agents)
-  const userData = data.users as { wallet_address: string } | { wallet_address: string }[] | null;
-  const wallet = Array.isArray(userData) ? userData[0]?.wallet_address : userData?.wallet_address;
-
-  if (!wallet) {
-    return null;
-  }
-
-  return { agent: data, ownerWallet: wallet, ownerSource: 'db' };
+  // Fallback for non-on-chain agents
+  return { agent: data, ownerWallet: user.wallet_address, ownerSource: 'db' };
 }
 
 interface PaymentRecord {
   agentId: string;
   caller: string;
-  recipient: string;  // Owner's wallet at time of payment (snapshot)
+  recipient: string;
   cents: number;
   txHash: string | null;
   requestId: string;
   status: string;
   network: Network;
-  // Performance stats
   startedAt?: number;
   responseTimeMs?: number;
   success?: boolean;
@@ -130,13 +136,12 @@ async function recordPayment(record: PaymentRecord): Promise<string | null> {
     const { data } = await supabaseAdmin.from('agent_payments').insert({
       agent_id: record.agentId,
       caller_address: record.caller,
-      recipient_address: record.recipient,  // Snapshot of owner at payment time
+      recipient_address: record.recipient,
       amount_cents: record.cents,
       tx_hash: record.txHash,
       network: record.network,
       status: record.status,
       request_id: record.requestId,
-      // Performance metrics
       started_at: record.startedAt ? new Date(record.startedAt).toISOString() : null,
       response_time_ms: record.responseTimeMs,
       success: record.success,
@@ -150,9 +155,8 @@ async function recordPayment(record: PaymentRecord): Promise<string | null> {
   }
 }
 
-// Generate feedbackAuth for users to leave reviews
 interface FeedbackAuthAgent {
-  id: string;  // DB UUID
+  id: string;
   erc8004_token_id: string | null;
   erc8004_chain_id: number | null;
   feedback_signer_address: string | null;
@@ -167,7 +171,6 @@ async function generateFeedbackAuthForPayment(
   paymentId: string
 ): Promise<{ feedbackAuth: string; expiry: string } | null> {
   try {
-    // Check if agent has feedback signing enabled
     if (!agent.feedback_signer_address ||
         !agent.feedback_signer_private_key ||
         !agent.feedback_operator_set_at ||
@@ -177,11 +180,8 @@ async function generateFeedbackAuthForPayment(
       return null;
     }
 
-    // Decrypt private key
     const privateKey = decryptPrivateKey(agent.feedback_signer_private_key);
 
-    // Get current feedback count for this caller on this agent
-    // This allows multiple reviews from same user (one per payment)
     const { count: existingReviewCount } = await supabaseAdmin
       .from('agent_reviews')
       .select('*', { count: 'exact', head: true })
@@ -189,7 +189,6 @@ async function generateFeedbackAuthForPayment(
       .eq('reviewer_address', caller)
       .is('revoked_at', null);
 
-    // Create feedbackAuth with correct index (30 minute expiry)
     const result = await createFeedbackAuth({
       agentId: agent.erc8004_token_id,
       clientAddress: caller,
@@ -201,11 +200,10 @@ async function generateFeedbackAuthForPayment(
       expiryMinutes: 30,
     });
 
-    // Store token in database
     await supabaseAdmin.from('feedback_auth_tokens').insert({
       payment_id: paymentId,
-      agent_id: agent.id,  // DB UUID
-      erc8004_agent_id: agent.erc8004_token_id,  // On-chain token ID
+      agent_id: agent.id,
+      erc8004_agent_id: agent.erc8004_token_id,
       client_address: caller,
       index_limit: Number(result.data.indexLimit),
       expiry: Number(result.data.expiry),
@@ -232,7 +230,6 @@ function buildPaymentRequired(agent: { name: string; price_per_call: number }, o
       scheme: 'exact', network: networkConfig.network, asset: networkConfig.usdcAddress,
       amount: centsToUsdcUnits(agent.price_per_call).toString(),
       payTo: ownerWallet, maxTimeoutSeconds: 300,
-      // EIP-712 domain parameters required for EIP-3009 USDC signatures
       extra: {
         name: networkConfig.usdcEip712Domain.name,
         version: networkConfig.usdcEip712Domain.version,
@@ -246,18 +243,18 @@ export async function OPTIONS() {
   return new NextResponse(null, { status: 204, headers: CORS });
 }
 
-// Main proxy endpoint
-export async function POST(request: NextRequest, { params }: { params: Promise<{ agentId: string }> }) {
-  const { agentId } = await params;
+// Main proxy endpoint - handle/slug version
+export async function POST(request: NextRequest, { params }: { params: Promise<{ handle: string; slug: string }> }) {
+  const { handle, slug } = await params;
   const requestId = crypto.randomUUID();
   const timestamp = Date.now();
   const baseUrl = request.headers.get('x-forwarded-host') || request.headers.get('host') || 'localhost';
-  const resource = `${request.headers.get('x-forwarded-proto') || 'https'}://${baseUrl}/api/v1/call/${agentId}`;
+  const resource = `${request.headers.get('x-forwarded-proto') || 'https'}://${baseUrl}/api/v1/call/${handle}/${slug}`;
 
-  // 1. Get agent with on-chain owner verification
+  // 1. Get agent by handle/slug with on-chain owner verification
   let result;
   try {
-    result = await getAgentWithOwner(agentId);
+    result = await getAgentByHandleSlug(handle, slug);
   } catch (e) {
     if (e instanceof Error && e.message === 'ONCHAIN_VERIFICATION_FAILED') {
       return errorResponse('Blockchain verification temporarily unavailable. Please retry.', 503, requestId);
@@ -267,13 +264,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   if (!result) return errorResponse('Agent not found or not active', 404, requestId);
   const { agent, ownerWallet } = result;
 
-  // 2. Network config - use agent's chain or fallback to default
+  // 2. Network config
   let networkConfig: NetworkConfig;
   try {
     if (agent.erc8004_chain_id) {
       networkConfig = await getNetworkConfig(agent.erc8004_chain_id);
     } else {
-      // Fallback for agents without chain (shouldn't happen for live agents)
       networkConfig = await getDefaultNetworkConfig();
     }
   } catch { return errorResponse('Unsupported network for this agent', 503, requestId); }
@@ -310,10 +306,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   }
   const caller = verifyResult.payer || 'unknown';
 
-  // 5b. Simulate the payment to catch errors early (self-payment, insufficient balance, etc.)
+  // 5b. Simulate payment
   const simResult = await simulatePayment(paymentPayload, paymentReqs, networkConfig.rpcUrl);
   if (!simResult.success) {
-    console.error('[Proxy] SIMULATION FAILED:', { requestId, agentId, caller, error: simResult.error, reason: simResult.errorReason });
+    console.error('[Proxy] SIMULATION FAILED:', { requestId, agentId: agent.id, caller, error: simResult.error, reason: simResult.errorReason });
     return jsonResponse(
       { error: 'Payment simulation failed', reason: simResult.errorReason, details: simResult.error },
       400,
@@ -330,11 +326,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
   // 7. Build target headers
   const targetHeaders: Record<string, string> = {
-    'X-Agentokratia-Request-Id': requestId, 'X-Agentokratia-Agent-Id': agentId,
+    'X-Agentokratia-Request-Id': requestId, 'X-Agentokratia-Agent-Id': agent.id,
     'X-Agentokratia-Caller': caller, 'X-Agentokratia-Timestamp': timestamp.toString(),
   };
 
-  // Add the agent secret header if configured
   if (agent.agent_secret) {
     targetHeaders['X-Agentokratia-Secret'] = agent.agent_secret;
   }
@@ -358,7 +353,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const responseTimeMs = Date.now() - timestamp;
     const isTimeout = e instanceof Error && e.name === 'AbortError';
     await recordPayment({
-      agentId, caller, recipient: ownerWallet, cents: agent.price_per_call, txHash: null, requestId, status: 'failed', network: networkConfig.network,
+      agentId: agent.id, caller, recipient: ownerWallet, cents: agent.price_per_call, txHash: null, requestId, status: 'failed', network: networkConfig.network,
       startedAt: timestamp, responseTimeMs, success: false, errorCode: isTimeout ? 'TIMEOUT' : 'TARGET_ERROR',
     });
     return errorResponse(isTimeout ? 'Target API timeout' : 'Target API unavailable', 502, requestId);
@@ -369,24 +364,23 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   // 9. Target error = no charge
   if (!targetResponse.ok) {
     await recordPayment({
-      agentId, caller, recipient: ownerWallet, cents: agent.price_per_call, txHash: null, requestId, status: 'failed', network: networkConfig.network,
+      agentId: agent.id, caller, recipient: ownerWallet, cents: agent.price_per_call, txHash: null, requestId, status: 'failed', network: networkConfig.network,
       startedAt: timestamp, responseTimeMs, success: false, httpStatus: targetResponse.status, errorCode: 'TARGET_ERROR',
     });
     return new NextResponse(targetBody, { status: targetResponse.status, headers: { 'Content-Type': targetContentType, ...CORS, 'X-Agentokratia-Request-Id': requestId } });
   }
 
-  // 10. CRITICAL: Re-verify ownership before settlement to prevent TOCTOU race condition
-  // If NFT was transferred between payment request and settlement, reject to prevent paying wrong person
+  // 10. Re-verify ownership before settlement
   if (agent.erc8004_token_id && agent.erc8004_chain_id) {
     const currentOwner = await getOnChainOwner(agent.erc8004_token_id, agent.erc8004_chain_id);
     if (!currentOwner || currentOwner.toLowerCase() !== ownerWallet.toLowerCase()) {
       console.error('[Proxy] OWNER_CHANGED: NFT transferred during payment', {
-        requestId, agentId, caller,
+        requestId, agentId: agent.id, caller,
         expectedOwner: ownerWallet,
         currentOwner: currentOwner || 'lookup_failed',
       });
       await recordPayment({
-        agentId, caller, recipient: ownerWallet, cents: agent.price_per_call, txHash: null, requestId, status: 'failed', network: networkConfig.network,
+        agentId: agent.id, caller, recipient: ownerWallet, cents: agent.price_per_call, txHash: null, requestId, status: 'failed', network: networkConfig.network,
         startedAt: timestamp, responseTimeMs, success: false, errorCode: 'OWNER_CHANGED',
       });
       return errorResponse('Agent ownership changed during payment. Please retry.', 409, requestId);
@@ -406,19 +400,18 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   let feedbackAuthResult: { feedbackAuth: string; expiry: string } | null = null;
 
   if (!settleResult?.success) {
-    console.error('[Proxy] SETTLEMENT FAILED:', { requestId, agentId, caller, ownerWallet, amount: agent.price_per_call, error: lastError });
+    console.error('[Proxy] SETTLEMENT FAILED:', { requestId, agentId: agent.id, caller, ownerWallet, amount: agent.price_per_call, error: lastError });
     paymentId = await recordPayment({
-      agentId, caller, recipient: ownerWallet, cents: agent.price_per_call, txHash: null, requestId, status: 'verified', network: networkConfig.network,
+      agentId: agent.id, caller, recipient: ownerWallet, cents: agent.price_per_call, txHash: null, requestId, status: 'verified', network: networkConfig.network,
       startedAt: timestamp, responseTimeMs, success: true, httpStatus: targetResponse.status,
     });
   } else {
     paymentId = await recordPayment({
-      agentId, caller, recipient: ownerWallet, cents: agent.price_per_call, txHash: settleResult.transaction || null, requestId, status: 'settled', network: networkConfig.network,
+      agentId: agent.id, caller, recipient: ownerWallet, cents: agent.price_per_call, txHash: settleResult.transaction || null, requestId, status: 'settled', network: networkConfig.network,
       startedAt: timestamp, responseTimeMs, success: true, httpStatus: targetResponse.status,
     });
-    try { await supabaseAdmin.rpc('increment_agent_stats', { p_agent_id: agentId, p_amount_cents: agent.price_per_call }); } catch {}
+    try { await supabaseAdmin.rpc('increment_agent_stats', { p_agent_id: agent.id, p_amount_cents: agent.price_per_call }); } catch {}
 
-    // Generate feedbackAuth token for review eligibility
     if (paymentId) {
       feedbackAuthResult = await generateFeedbackAuthForPayment(
         agent as FeedbackAuthAgent,
@@ -429,7 +422,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }
   }
 
-  // 11. Return response with optional feedbackAuth header
+  // 12. Return response
   const responseHeaders: Record<string, string> = {
     'Content-Type': targetContentType,
     ...CORS,
@@ -444,7 +437,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     'X-Agentokratia-Request-Id': requestId,
   };
 
-  // Add feedbackAuth header if generated (allows user to submit review)
   if (feedbackAuthResult) {
     responseHeaders['X-Feedback-Auth'] = feedbackAuthResult.feedbackAuth;
     responseHeaders['X-Feedback-Expires'] = feedbackAuthResult.expiry;

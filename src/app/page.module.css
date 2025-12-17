@@ -305,6 +305,80 @@
   color: var(--ink);
 }
 
+.btnPrimary:disabled {
+  background: var(--sand);
+  cursor: not-allowed;
+}
+
+/* Email form */
+.emailForm {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  margin: var(--space-md) 0;
+}
+
+.emailInput {
+  width: 100%;
+  padding: 12px 16px;
+  font-size: 15px;
+  border: 1px solid var(--sand);
+  border-radius: var(--radius-sm);
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.emailInput:focus {
+  border-color: var(--ink);
+}
+
+.emailInput::placeholder {
+  color: var(--stone);
+}
+
+.cardError {
+  font-size: 14px;
+  color: #dc2626;
+  margin: var(--space-sm) 0 0 0;
+}
+
+/* Handle input with prefix */
+.inputGroup {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  border: 1px solid var(--sand);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  transition: border-color 0.15s;
+}
+
+.inputGroup:focus-within {
+  border-color: var(--ink);
+}
+
+.inputPrefix {
+  padding: 12px 0 12px 16px;
+  font-size: 15px;
+  color: var(--stone);
+  background: var(--cloud);
+  user-select: none;
+}
+
+.handleInput {
+  flex: 1;
+  padding: 12px 16px 12px 4px;
+  font-size: 15px;
+  border: none;
+  outline: none;
+  background: transparent;
+}
+
+.handleInput::placeholder {
+  color: var(--stone);
+}
+
 /* Responsive - stack on mobile */
 @media (max-width: 900px) {
   .page {

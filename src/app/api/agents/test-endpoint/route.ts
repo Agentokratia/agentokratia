@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { url, payload } = body;
+    const { url, payload, headers: customHeaders } = body;
 
     if (!url || typeof url !== 'string') {
       return NextResponse.json({ error: 'URL is required' }, { status: 400 });
@@ -71,8 +71,8 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // SSRF protection
-    if (isInternalUrl(url)) {
+    // SSRF protection (disabled in development for local testing)
+    if (process.env.NODE_ENV !== 'development' && isInternalUrl(url)) {
       return NextResponse.json({
         success: false,
         error: 'Internal URLs are not allowed'
@@ -84,12 +84,24 @@ export async function POST(request: NextRequest) {
     const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
 
     try {
+      // Build headers - start with defaults, then add custom headers
+      const requestHeaders: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'X-Agentokratia-Test': 'true',
+      };
+
+      // Add custom headers (including X-Agentokratia-Secret if provided)
+      if (customHeaders && typeof customHeaders === 'object') {
+        Object.entries(customHeaders).forEach(([key, value]) => {
+          if (typeof key === 'string' && typeof value === 'string' && key.trim() && value.trim()) {
+            requestHeaders[key] = value;
+          }
+        });
+      }
+
       const response = await fetch(url, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Agentokratia-Test': 'true',
-        },
+        headers: requestHeaders,
         body: JSON.stringify(payload || {}),
         signal: controller.signal,
       });

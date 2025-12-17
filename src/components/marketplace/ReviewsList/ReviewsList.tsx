@@ -36,7 +36,8 @@ interface ReviewsResponse {
 }
 
 interface ReviewsListProps {
-  agentId: string;
+  ownerHandle: string;
+  agentSlug: string;
   chainId?: number | null;
   blockExplorerUrl?: string;
 }
@@ -52,18 +53,18 @@ const TAG_DISPLAY: Record<string, string> = {
   expensive: 'Expensive',
 };
 
-async function fetchReviews(agentId: string, page: number): Promise<ReviewsResponse> {
-  const res = await fetch(`/api/marketplace/${agentId}/reviews?page=${page}&limit=10&sort=recent`);
+async function fetchReviews(ownerHandle: string, agentSlug: string, page: number): Promise<ReviewsResponse> {
+  const res = await fetch(`/api/marketplace/${ownerHandle}/${agentSlug}/reviews?page=${page}&limit=10&sort=recent`);
   if (!res.ok) throw new Error('Failed to fetch reviews');
   return res.json();
 }
 
-export function ReviewsList({ agentId, chainId, blockExplorerUrl }: ReviewsListProps) {
+export function ReviewsList({ ownerHandle, agentSlug, chainId, blockExplorerUrl }: ReviewsListProps) {
   const [page, setPage] = useState(1);
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ['reviews', agentId, page],
-    queryFn: () => fetchReviews(agentId, page),
+    queryKey: ['reviews', ownerHandle, agentSlug, page],
+    queryFn: () => fetchReviews(ownerHandle, agentSlug, page),
     staleTime: 30_000,
   });
 
@@ -155,9 +156,10 @@ export function ReviewsList({ agentId, chainId, blockExplorerUrl }: ReviewsListP
                     target="_blank"
                     rel="noopener noreferrer"
                     className={styles.txLink}
-                    title="Verified on-chain"
+                    title="View on blockchain"
                   >
                     <ExternalLink size={12} />
+                    <span>On-chain</span>
                   </a>
                 )}
               </div>

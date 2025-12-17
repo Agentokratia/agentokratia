@@ -1,11 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY || '';
-
-// Client for browser-side operations (limited access)
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // Admin client for server-side operations (full access)
 export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
@@ -59,6 +55,7 @@ export interface DbAgent {
   id: string;
   owner_id: string;             // Current owner (FK to users) - changes on claim
   name: string;
+  slug: string;                 // URL-friendly identifier (unique per owner)
   description: string | null;
   category: AgentCategory;
   endpoint_url: string;

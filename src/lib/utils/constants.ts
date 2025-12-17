@@ -53,7 +53,9 @@ export const API_STATUS = {
 export const ROUTES = {
   HOME: '/',
   MARKETPLACE: '/marketplace',
-  API_DETAIL: (id: string) => `/marketplace/${id}`,
+  AGENT_DETAIL: (handle: string, slug: string) => `/${handle}/${slug}`,
+  AGENT_API: (handle: string, slug: string) => `/api/v1/call/${handle}/${slug}`,
+  CREATOR: (handle: string) => `/creator/${handle}`,
   DASHBOARD: '/dashboard',
   DASHBOARD_APIS: '/dashboard/apis',
   DASHBOARD_NEW_API: '/dashboard/apis/new',

@@ -1,1 +1,4 @@
-export { usePendingPublishRetry } from './usePendingPublishRetry';
+export {
+  usePendingTransactionRetry,
+  usePendingTransactionRetryByType,
+} from './usePendingTransactionRetry';

@@ -72,13 +72,21 @@ export async function POST(
     );
   }
 
-  // Idempotency check - already confirmed
+  // Idempotency check - already confirmed with same txHash
   if (agent.feedback_operator_tx_hash === txHash) {
     return NextResponse.json({
       success: true,
       txHash: agent.feedback_operator_tx_hash,
       idempotent: true,
     });
+  }
+
+  // If already confirmed with different txHash, reject
+  if (agent.feedback_operator_tx_hash) {
+    return NextResponse.json(
+      { error: 'Reviews already enabled with a different transaction' },
+      { status: 409 }
+    );
   }
 
   try {
@@ -89,12 +97,14 @@ export async function POST(
       transport: http(networkConfig.rpcUrl),
     });
 
-    // Wait for transaction confirmation
-    const receipt = await publicClient.waitForTransactionReceipt({
-      hash: txHash as `0x${string}`,
-      timeout: 60_000,
-      confirmations: 1,
-    });
+    // Wait for transaction confirmation with retry
+    const receipt = await withRetry(async () => {
+      return await publicClient.waitForTransactionReceipt({
+        hash: txHash as `0x${string}`,
+        timeout: 30_000,
+        confirmations: 1,
+      });
+    }, 5, 3000);
 
     if (receipt.status !== 'success') {
       return NextResponse.json(
@@ -103,20 +113,50 @@ export async function POST(
       );
     }
 
-    // Update agent with operator tx hash
-    const { error: updateError } = await supabaseAdmin
+    // SECURITY: Verify transaction was sent by the authenticated user
+    const tx = await publicClient.getTransaction({ hash: txHash as `0x${string}` });
+    if (!tx || tx.from.toLowerCase() !== auth.address.toLowerCase()) {
+      console.error('Enable reviews confirm: tx sender mismatch', {
+        txFrom: tx?.from?.toLowerCase(),
+        authAddress: auth.address.toLowerCase(),
+      });
+      return NextResponse.json(
+        { error: 'Transaction sender does not match authenticated user' },
+        { status: 403 }
+      );
+    }
+
+    // ATOMIC UPDATE: Only update if feedback_operator_tx_hash is still null
+    const { data: updated, error: updateError } = await supabaseAdmin
       .from('agents')
       .update({
         feedback_operator_tx_hash: txHash,
         feedback_operator_set_at: new Date().toISOString(),
       })
-      .eq('id', agentId);
+      .eq('id', agentId)
+      .is('feedback_operator_tx_hash', null)
+      .select('feedback_operator_tx_hash')
+      .single();
 
-    if (updateError) {
-      console.error('Failed to update agent:', updateError);
+    if (updateError || !updated) {
+      // Race condition - another request updated first, re-check
+      const { data: recheck } = await supabaseAdmin
+        .from('agents')
+        .select('feedback_operator_tx_hash')
+        .eq('id', agentId)
+        .single();
+
+      if (recheck?.feedback_operator_tx_hash === txHash) {
+        return NextResponse.json({
+          success: true,
+          txHash,
+          idempotent: true,
+        });
+      }
+
       return NextResponse.json(
-        { error: 'Failed to update agent record' },
-        { status: 500 }
+        { error: 'Reviews already enabled with a different transaction' },
+        { status: 409 }
       );
     }
 
@@ -126,10 +166,10 @@ export async function POST(
     });
   } catch (err) {
     console.error('Enable reviews confirm failed:', err);
-    const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+    // Return 503 for retry if transaction not yet confirmed
     return NextResponse.json(
-      { error: `Failed to confirm transaction: ${errorMessage}` },
-      { status: 500 }
+      { error: 'Transaction not yet confirmed. Please try again.' },
+      { status: 503 }
     );
   }
 }

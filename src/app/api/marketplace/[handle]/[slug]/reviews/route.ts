@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { keccak256, stringToBytes } from 'viem';
-import { supabaseAdmin, DbAgentReview, DbAgentReviewStats } from '@/lib/db/supabase';
+import { keccak256, stringToBytes, createPublicClient, http } from 'viem';
+import { base, baseSepolia } from 'viem/chains';
+import { supabaseAdmin, DbAgentReview } from '@/lib/db/supabase';
 import { shortenAddress } from '@/lib/utils/format';
 import { FEEDBACK_TAGS, EMPTY_BYTES32 } from '@/lib/erc8004/contracts';
+import { resolveAgentByHandleSlug } from '@/lib/utils/resolveAgent';
+import { getNetworkConfig } from '@/lib/network';
 
 // Valid tags for validation
 const VALID_TAGS = Object.keys(FEEDBACK_TAGS);
-
-// Public API - GET reviews (no auth required)
-// POST requires feedbackAuth from x402 payment
 
 interface ReviewResponse {
   id: string;
@@ -41,7 +41,6 @@ interface ReviewStats {
   };
 }
 
-// Convert score (0-100) to stars (1-5)
 function scoreToStars(score: number): number {
   if (score >= 81) return 5;
   if (score >= 61) return 4;
@@ -50,14 +49,21 @@ function scoreToStars(score: number): number {
   return 1;
 }
 
-// GET /api/marketplace/[id]/reviews - Get reviews for an agent
+// GET /api/marketplace/[handle]/[slug]/reviews
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ handle: string; slug: string }> }
 ) {
   try {
-    const { id: agentId } = await params;
+    const { handle, slug } = await params;
     const { searchParams } = new URL(request.url);
+
+    // Resolve handle/slug to agentId
+    const resolved = await resolveAgentByHandleSlug(handle, slug);
+    if (!resolved) {
+      return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
+    }
+    const { agentId } = resolved;
 
     const pageParam = parseInt(searchParams.get('page') || '1', 10);
     const limitParam = parseInt(searchParams.get('limit') || '10', 10);
@@ -66,7 +72,7 @@ export async function GET(
     const sort = searchParams.get('sort') || 'recent';
     const offset = (page - 1) * limit;
 
-    // Verify agent exists and is live
+    // Verify agent is live
     const { data: agent, error: agentError } = await supabaseAdmin
       .from('agents')
       .select('id, status')
@@ -75,10 +81,7 @@ export async function GET(
       .single();
 
     if (agentError || !agent) {
-      return NextResponse.json(
-        { error: 'Agent not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
     }
 
     // Build query for reviews
@@ -88,7 +91,6 @@ export async function GET(
       .eq('agent_id', agentId)
       .is('revoked_at', null);
 
-    // Apply sorting
     switch (sort) {
       case 'score_high':
         query = query.order('score', { ascending: false });
@@ -101,17 +103,13 @@ export async function GET(
         query = query.order('created_at', { ascending: false });
     }
 
-    // Apply pagination
     query = query.range(offset, offset + limit - 1);
 
     const { data: reviewsData, error: reviewsError, count } = await query;
 
     if (reviewsError) {
       console.error('Error fetching reviews:', reviewsError);
-      return NextResponse.json(
-        { error: 'Failed to fetch reviews' },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: 'Failed to fetch reviews' }, { status: 500 });
     }
 
     // Fetch user handles for reviewer addresses
@@ -134,7 +132,6 @@ export async function GET(
       .eq('agent_id', agentId)
       .single();
 
-    // Transform reviews for response
     const reviews: ReviewResponse[] = (reviewsData || []).map((review: DbAgentReview) => ({
       id: review.id,
       score: review.score,
@@ -153,7 +150,6 @@ export async function GET(
       createdAt: review.created_at,
     }));
 
-    // Build stats
     const stats: ReviewStats = statsData
       ? {
           avgScore: statsData.avg_score || 0,
@@ -177,75 +173,54 @@ export async function GET(
     return NextResponse.json({
       reviews,
       stats,
-      pagination: {
-        page,
-        limit,
-        total: count || 0,
-        hasMore: (count || 0) > offset + limit,
-      },
+      pagination: { page, limit, total: count || 0, hasMore: (count || 0) > offset + limit },
     });
   } catch (error) {
     console.error('Reviews fetch error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
-// POST /api/marketplace/[id]/reviews - Submit a new review
-// Requires feedbackAuth from x402 payment
+// POST /api/marketplace/[handle]/[slug]/reviews - Submit a new review OR confirm tx hash
+// Supports both creating new reviews and confirming txHash (for sendBeacon compatibility)
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ handle: string; slug: string }> }
 ) {
   try {
-    const { id: agentId } = await params;
+    const { handle, slug } = await params;
     const body = await request.json();
+
+
+    // Resolve handle/slug to agentId
+    const resolved = await resolveAgentByHandleSlug(handle, slug);
+    if (!resolved) {
+      return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
+    }
+    const { agentId } = resolved;
 
     const { feedbackAuth, score, title, content, tag1, tag2 } = body;
 
-    // Validate required fields
     if (!feedbackAuth) {
-      return NextResponse.json(
-        { error: 'feedbackAuth is required' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'feedbackAuth is required' }, { status: 400 });
     }
 
     if (typeof score !== 'number' || score < 0 || score > 100) {
-      return NextResponse.json(
-        { error: 'score must be a number between 0 and 100' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'score must be a number between 0 and 100' }, { status: 400 });
     }
 
-    // Validate tags if provided
     if (tag1 && !VALID_TAGS.includes(tag1)) {
-      return NextResponse.json(
-        { error: `Invalid tag1. Must be one of: ${VALID_TAGS.join(', ')}` },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: `Invalid tag1. Must be one of: ${VALID_TAGS.join(', ')}` }, { status: 400 });
     }
     if (tag2 && !VALID_TAGS.includes(tag2)) {
-      return NextResponse.json(
-        { error: `Invalid tag2. Must be one of: ${VALID_TAGS.join(', ')}` },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: `Invalid tag2. Must be one of: ${VALID_TAGS.join(', ')}` }, { status: 400 });
     }
 
-    // Validate optional title/content length
     if (title && (typeof title !== 'string' || title.length > 200)) {
-      return NextResponse.json(
-        { error: 'title must be a string with max 200 characters' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'title must be a string with max 200 characters' }, { status: 400 });
     }
     if (content && (typeof content !== 'string' || content.length > 2000)) {
-      return NextResponse.json(
-        { error: 'content must be a string with max 2000 characters' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'content must be a string with max 2000 characters' }, { status: 400 });
     }
 
     // Verify agent exists and is live
@@ -257,10 +232,7 @@ export async function POST(
       .single();
 
     if (agentError || !agent) {
-      return NextResponse.json(
-        { error: 'Agent not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
     }
 
     // Find the feedback auth token
@@ -273,24 +245,15 @@ export async function POST(
       .single();
 
     if (authError || !authToken) {
-      return NextResponse.json(
-        { error: 'Invalid or expired feedbackAuth' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: 'Invalid or expired feedbackAuth' }, { status: 401 });
     }
 
-    // Check if token is expired
     const now = Math.floor(Date.now() / 1000);
     const expiry = parseInt(authToken.expiry, 10);
     if (Number.isNaN(expiry) || expiry < now) {
-      return NextResponse.json(
-        { error: 'feedbackAuth has expired' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: 'feedbackAuth has expired' }, { status: 401 });
     }
 
-    // Get the payment record to determine who was PAID (not current owner)
-    // This ensures review is attributed to the owner at payment time
     const { data: paymentRecord, error: paymentError } = await supabaseAdmin
       .from('agent_payments')
       .select('id, recipient_address')
@@ -298,15 +261,11 @@ export async function POST(
       .single();
 
     if (paymentError || !paymentRecord?.recipient_address) {
-      return NextResponse.json(
-        { error: 'Payment record not found' },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: 'Payment record not found' }, { status: 500 });
     }
 
     const ownerAtPayment = paymentRecord.recipient_address;
 
-    // Check if payment already has a review
     const { data: existingReview } = await supabaseAdmin
       .from('agent_reviews')
       .select('id')
@@ -314,13 +273,9 @@ export async function POST(
       .single();
 
     if (existingReview) {
-      return NextResponse.json(
-        { error: 'Review already submitted for this payment' },
-        { status: 409 }
-      );
+      return NextResponse.json({ error: 'Review already submitted for this payment' }, { status: 409 });
     }
 
-    // Generate content hash using keccak256
     const reviewContent = {
       version: '1.0',
       agentId,
@@ -333,21 +288,14 @@ export async function POST(
       createdAt: new Date().toISOString(),
     };
 
-    // Proper keccak256 hash of review content
     const contentHash = keccak256(stringToBytes(JSON.stringify(reviewContent)));
 
-    // Calculate feedback index from authToken's index_limit
-    // index_limit = currentFeedbackIndex + 1, so feedback_index = index_limit - 1
     const indexLimit = parseInt(authToken.index_limit, 10);
     if (Number.isNaN(indexLimit) || indexLimit < 1) {
-      return NextResponse.json(
-        { error: 'Invalid feedback auth token' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Invalid feedback auth token' }, { status: 400 });
     }
     const feedbackIndex = indexLimit - 1;
 
-    // Create the review
     const { data: review, error: reviewError } = await supabaseAdmin
       .from('agent_reviews')
       .insert({
@@ -355,7 +303,7 @@ export async function POST(
         erc8004_agent_id: agent.erc8004_token_id,
         payment_id: authToken.payment_id,
         reviewer_address: authToken.client_address,
-        owner_address_at_review: ownerAtPayment,  // Owner who was PAID (from payment record)
+        owner_address_at_review: ownerAtPayment,
         feedback_index: feedbackIndex,
         score,
         tag1: tag1 || null,
@@ -370,20 +318,15 @@ export async function POST(
 
     if (reviewError) {
       console.error('Error creating review:', reviewError);
-      return NextResponse.json(
-        { error: 'Failed to create review' },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: 'Failed to create review' }, { status: 500 });
     }
 
-    // Mark the auth token as used
     await supabaseAdmin
       .from('feedback_auth_tokens')
       .update({ used_at: new Date().toISOString() })
       .eq('id', authToken.id);
 
-    // Return the review with on-chain data for client to call giveFeedback()
-    const fileuri = `${process.env.NEXT_PUBLIC_APP_URL || 'https://api.agentokratia.com'}/api/reviews/${review.id}`;
+    const fileuri = `${process.env.NEXT_PUBLIC_APP_URL || 'https://agentokratia.com'}/api/reviews/${review.id}`;
 
     return NextResponse.json({
       review: {
@@ -407,9 +350,155 @@ export async function POST(
     });
   } catch (error) {
     console.error('Review creation error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+// PATCH /api/marketplace/[handle]/[slug]/reviews - Update review with tx hash
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ handle: string; slug: string }> }
+) {
+  try {
+    const { handle, slug } = await params;
+    const body = await request.json();
+    return confirmReviewTxHashWithBody(handle, slug, body);
+  } catch (error) {
+    console.error('Review PATCH error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+// Helper function to confirm review txHash
+async function confirmReviewTxHashWithBody(
+  handle: string,
+  slug: string,
+  body: { reviewId?: string; txHash?: string; chainId?: number }
+) {
+  try {
+    const { reviewId, txHash, chainId } = body;
+
+    if (!reviewId || typeof reviewId !== 'string') {
+      return NextResponse.json({ error: 'reviewId is required' }, { status: 400 });
+    }
+
+    if (!txHash || typeof txHash !== 'string' || !/^0x[0-9a-fA-F]{64}$/.test(txHash)) {
+      return NextResponse.json({ error: 'Invalid txHash format' }, { status: 400 });
+    }
+
+    if (!chainId || typeof chainId !== 'number') {
+      return NextResponse.json({ error: 'chainId is required' }, { status: 400 });
+    }
+
+    // Resolve handle/slug to agentId
+    const resolved = await resolveAgentByHandleSlug(handle, slug);
+    if (!resolved) {
+      return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
+    }
+    const { agentId } = resolved;
+
+    // First check if review exists and its current state
+    const { data: existingReview, error: fetchError } = await supabaseAdmin
+      .from('agent_reviews')
+      .select('id, tx_hash, chain_id, reviewer_address')
+      .eq('id', reviewId)
+      .eq('agent_id', agentId)
+      .single();
+
+    if (fetchError || !existingReview) {
+      return NextResponse.json({ error: 'Review not found' }, { status: 404 });
+    }
+
+    // IDEMPOTENCY CHECK: If already confirmed with same txHash, return success
+    if (existingReview.tx_hash === txHash) {
+      return NextResponse.json({
+        success: true,
+        reviewId: existingReview.id,
+        txHash: existingReview.tx_hash,
+        idempotent: true,
+      });
+    }
+
+    // If already confirmed with different txHash, reject
+    if (existingReview.tx_hash) {
+      return NextResponse.json(
+        { error: 'Review already confirmed with a different transaction' },
+        { status: 409 }
+      );
+    }
+
+    // SECURITY: Verify transaction exists on-chain AND was sent by the reviewer
+    try {
+      const networkConfig = await getNetworkConfig(chainId);
+      const chain = chainId === base.id ? base : baseSepolia;
+      const publicClient = createPublicClient({
+        chain,
+        transport: http(networkConfig.rpcUrl),
+      });
+
+      // Get both transaction and receipt to verify sender and status
+      const [tx, receipt] = await Promise.all([
+        publicClient.getTransaction({ hash: txHash as `0x${string}` }),
+        publicClient.getTransactionReceipt({ hash: txHash as `0x${string}` }),
+      ]);
+
+      if (!receipt || receipt.status !== 'success') {
+        return NextResponse.json(
+          { error: 'Transaction not found or failed on-chain' },
+          { status: 400 }
+        );
+      }
+
+      // CRITICAL: Verify the transaction was sent by the original reviewer
+      if (!tx || tx.from.toLowerCase() !== existingReview.reviewer_address.toLowerCase()) {
+        return NextResponse.json(
+          { error: 'Transaction sender does not match reviewer address' },
+          { status: 403 }
+        );
+      }
+    } catch {
+      return NextResponse.json(
+        { error: 'Transaction not yet confirmed. Please try again.' },
+        { status: 503 }
+      );
+    }
+
+    // ATOMIC UPDATE: Only update if tx_hash is still null (prevent race condition)
+    const { data: updated, error: updateError } = await supabaseAdmin
+      .from('agent_reviews')
+      .update({ tx_hash: txHash })
+      .eq('id', reviewId)
+      .eq('agent_id', agentId)
+      .is('tx_hash', null)
+      .select('id, tx_hash')
+      .single();
+
+    if (updateError || !updated) {
+      // Race condition - another request updated first, re-check
+      const { data: recheck } = await supabaseAdmin
+        .from('agent_reviews')
+        .select('tx_hash')
+        .eq('id', reviewId)
+        .single();
+
+      if (recheck?.tx_hash === txHash) {
+        return NextResponse.json({
+          success: true,
+          reviewId,
+          txHash,
+          idempotent: true,
+        });
+      }
+
+      return NextResponse.json(
+        { error: 'Review already confirmed with a different transaction' },
+        { status: 409 }
+      );
+    }
+
+    return NextResponse.json({ success: true, reviewId, txHash });
+  } catch (error) {
+    console.error('Review confirm error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

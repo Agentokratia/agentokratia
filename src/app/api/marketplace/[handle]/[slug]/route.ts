@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin, DbAgent } from '@/lib/db/supabase';
 
 // Public API - no auth required
-// Returns a single live/public agent by ID with full details
+// Returns a single live/public agent by handle/slug with full details
 
 interface MarketplaceAgentDetail {
   id: string;
   name: string;
+  slug: string;
   description: string | null;
   category: string;
   pricePerCall: number;
@@ -17,7 +18,7 @@ interface MarketplaceAgentDetail {
   publishedAt: string | null;
   readme: string | null;
   ownerId: string;
-  ownerHandle: string | null;
+  ownerHandle: string;
   ownerName: string | null;
   inputSchema: object | null;
   outputSchema: object | null;
@@ -25,6 +26,8 @@ interface MarketplaceAgentDetail {
   erc8004TokenId: string | null;
   erc8004TxHash: string | null;
   erc8004ChainId: number | null;
+  // Reviews enabled (feedbackSigner is set up)
+  reviewsEnabled: boolean;
   // Performance stats
   stats?: {
     uptime: number;
@@ -46,19 +49,34 @@ interface MarketplaceAgentDetail {
   };
 }
 
-// GET /api/marketplace/[id] - Get single public agent
+// GET /api/marketplace/[handle]/[slug] - Get single public agent by handle/slug
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ handle: string; slug: string }> }
 ) {
   try {
-    const { id } = await params;
+    const { handle, slug } = await params;
 
-    // Fetch agent with owner info
+    // First find the user by handle
+    const { data: user, error: userError } = await supabaseAdmin
+      .from('users')
+      .select('id, handle, name')
+      .eq('handle', handle.toLowerCase())
+      .single();
+
+    if (userError || !user) {
+      return NextResponse.json(
+        { error: 'Creator not found' },
+        { status: 404 }
+      );
+    }
+
+    // Fetch agent by owner_id and slug
     const { data, error } = await supabaseAdmin
       .from('agents')
-      .select('*, users!agents_owner_id_fkey(handle, name)')
-      .eq('id', id)
+      .select('*')
+      .eq('owner_id', user.id)
+      .eq('slug', slug.toLowerCase())
       .eq('status', 'live')
       .single();
 
@@ -69,27 +87,26 @@ export async function GET(
       );
     }
 
-    const agent = data as DbAgent & {
-      users?: { id: string; handle: string | null; name: string | null };
-    };
+    const agent = data as DbAgent;
 
-    // Fetch performance stats from view (separate query - views don't support FK joins)
+    // Fetch performance stats from view
     const { data: statsData } = await supabaseAdmin
       .from('agent_performance_stats')
       .select('uptime_pct, avg_response_ms, error_rate_pct')
-      .eq('agent_id', id)
+      .eq('agent_id', agent.id)
       .single();
 
     // Fetch review stats from view
     const { data: reviewStatsData } = await supabaseAdmin
       .from('agent_review_stats')
       .select('*')
-      .eq('agent_id', id)
+      .eq('agent_id', agent.id)
       .single();
 
     const result: MarketplaceAgentDetail = {
       id: agent.id,
       name: agent.name,
+      slug: agent.slug,
       description: agent.description ?? null,
       category: agent.category,
       pricePerCall: agent.price_per_call,
@@ -100,15 +117,17 @@ export async function GET(
       publishedAt: agent.published_at ?? null,
       readme: agent.readme ?? null,
       ownerId: agent.owner_id,
-      ownerHandle: agent.users?.handle ?? null,
-      ownerName: agent.users?.name ?? null,
+      ownerHandle: user.handle,
+      ownerName: user.name ?? null,
       inputSchema: agent.input_schema ?? null,
       outputSchema: agent.output_schema ?? null,
       // ERC-8004 on-chain identity
       erc8004TokenId: agent.erc8004_token_id ?? null,
       erc8004TxHash: agent.erc8004_tx_hash ?? null,
       erc8004ChainId: agent.erc8004_chain_id ?? null,
-      // Performance stats - only include if we have real data
+      // Reviews enabled (feedbackSigner is set up and operator approved)
+      reviewsEnabled: !!(agent.feedback_signer_address && agent.feedback_operator_set_at),
+      // Performance stats
       stats: statsData ? {
         uptime: statsData.uptime_pct,
         avgResponseMs: statsData.avg_response_ms,

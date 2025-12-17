@@ -5,10 +5,11 @@ import { isOnChainOwner } from '@/lib/ownership';
 import { centsToDollars } from '@/lib/utils/format';
 
 // Helper to format agent for API response
-function formatAgent(agent: DbAgent) {
+function formatAgent(agent: DbAgent & { users?: { handle: string | null } }, ownerHandle?: string) {
   return {
     id: agent.id,
     name: agent.name,
+    slug: agent.slug,
     description: agent.description,
     category: agent.category,
     endpointUrl: agent.endpoint_url,
@@ -31,6 +32,8 @@ function formatAgent(agent: DbAgent) {
     erc8004ChainId: agent.erc8004_chain_id,
     // Reviews/Feedback - check on-chain via isApprovedForAll, not DB state
     feedbackSignerAddress: agent.feedback_signer_address || null,
+    // Owner handle for URL construction
+    ownerHandle: ownerHandle || agent.users?.handle || null,
   };
 }
 
@@ -48,7 +51,7 @@ export async function GET(
 
     const { data, error } = await supabaseAdmin
       .from('agents')
-      .select('*')
+      .select('*, users!agents_owner_id_fkey(handle)')
       .eq('id', id)
       .eq('owner_id', auth.userId)
       .single();
@@ -57,7 +60,7 @@ export async function GET(
       return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
     }
 
-    return NextResponse.json({ agent: formatAgent(data as DbAgent) });
+    return NextResponse.json({ agent: formatAgent(data as DbAgent & { users?: { handle: string | null } }) });
   } catch (error) {
     console.error('Get agent error:', error);
     return NextResponse.json(
@@ -233,7 +236,7 @@ export async function PUT(
       .from('agents')
       .update(updates)
       .eq('id', id)
-      .select()
+      .select('*, users!agents_owner_id_fkey(handle)')
       .single();
 
     if (error) {
@@ -244,7 +247,7 @@ export async function PUT(
       );
     }
 
-    return NextResponse.json({ agent: formatAgent(updatedAgent as DbAgent) });
+    return NextResponse.json({ agent: formatAgent(updatedAgent as DbAgent & { users?: { handle: string | null } }) });
   } catch (error) {
     console.error('Update agent error:', error);
     return NextResponse.json(

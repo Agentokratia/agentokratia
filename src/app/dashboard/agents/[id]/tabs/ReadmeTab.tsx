@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { Eye, Edit3 } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Agent } from '../page';
@@ -132,7 +133,7 @@ export default function ReadmeTab({ agent, onSave, saving }: Props) {
           />
         ) : (
           <div className={styles.docsPreview}>
-            <ReactMarkdown>{readme}</ReactMarkdown>
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>{readme}</ReactMarkdown>
           </div>
         )}
       </div>

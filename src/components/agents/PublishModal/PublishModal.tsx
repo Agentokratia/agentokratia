@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAccount, useChainId, useSwitchChain } from 'wagmi';
 import { Check, AlertCircle, Loader2, ExternalLink, Rocket, Wallet, Twitter, Link2, MessageSquare } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal/Modal';
 import { Button } from '@/components/ui/Button/Button';
 import { useRegisterAgent, parseTokenIdFromLogs, useEstimateRegistrationFee } from '@/lib/erc8004/hooks';
 import { useNetworkConfig, getExplorerTxUrl } from '@/lib/network/client';
-import { useAuthStore, usePendingPublishStore } from '@/lib/store';
+import { useAuthStore, usePendingTransactionStore } from '@/lib/store';
 import { PLACEHOLDER_ENDPOINT } from '@/lib/utils/constants';
 import { formatUsdc } from '@/lib/utils/format';
 import styles from './PublishModal.module.css';
@@ -15,10 +15,12 @@ import styles from './PublishModal.module.css';
 interface Agent {
   id: string;
   name: string;
+  slug: string;
   description: string | null;
   endpointUrl: string;
   pricePerCall: number;
   status: string;
+  ownerHandle: string | null;
 }
 
 interface PublishModalProps {
@@ -41,7 +43,7 @@ interface Blocker {
 
 export function PublishModal({ open, onOpenChange, agent, hasSigningKey, onPublished, onEnableReviews }: PublishModalProps) {
   const { token } = useAuthStore();
-  const { setPending, clearPending } = usePendingPublishStore();
+  const { setPending, clearPending } = usePendingTransactionStore();
   const { isConnected } = useAccount();
   const chainId = useChainId();
   const { switchChain } = useSwitchChain();
@@ -53,6 +55,9 @@ export function PublishModal({ open, onOpenChange, agent, hasSigningKey, onPubli
   const [error, setError] = useState<string | null>(null);
   const [txHash, setTxHash] = useState<string | null>(null);
   const [tokenId, setTokenId] = useState<string | null>(null);
+
+  // Track if we've already processed this receipt to prevent duplicate calls
+  const processedReceiptRef = useRef<string | null>(null);
 
   // Check if wallet is on the configured network
   const isSupportedChain = networkConfig ? chainId === networkConfig.chainId : false;
@@ -96,22 +101,29 @@ export function PublishModal({ open, onOpenChange, agent, hasSigningKey, onPubli
       setError(null);
       setTxHash(null);
       setTokenId(null);
+      processedReceiptRef.current = null;
     }
   }, [open]);
 
   // Watch for transaction confirmation - confirm publish after registration
+  // Fixed: Don't rely on phase === 'confirming' as there's a race condition
+  // where receipt can arrive before setPhase('confirming') is called
   useEffect(() => {
-    if (receipt && phase === 'confirming') {
+    if (receipt && processedReceiptRef.current !== receipt.transactionHash) {
+      // Mark this receipt as processed to prevent duplicate calls
+      processedReceiptRef.current = receipt.transactionHash;
       const parsedTokenId = parseTokenIdFromLogs(receipt.logs);
       if (parsedTokenId) {
         setTokenId(parsedTokenId.toString());
-        confirmPublish(parsedTokenId.toString());
+        // Pass receipt.transactionHash directly instead of relying on txHash state
+        // which might not be updated yet due to React's async state updates
+        confirmPublish(parsedTokenId.toString(), receipt.transactionHash);
       } else {
         setError('Could not verify on-chain registration');
         setPhase('error');
       }
     }
-  }, [receipt, phase]);
+  }, [receipt]);
 
   // Handle transaction errors
   useEffect(() => {
@@ -122,7 +134,7 @@ export function PublishModal({ open, onOpenChange, agent, hasSigningKey, onPubli
       setError(message);
       setPhase('error');
       // Clear any pending publish on error
-      clearPending();
+      clearPending('publish');
     }
   }, [txError, phase, clearPending]);
 
@@ -157,16 +169,19 @@ export function PublishModal({ open, onOpenChange, agent, hasSigningKey, onPubli
     }
   }, [token, isReady, agent.id, register]);
 
-  const confirmPublish = async (parsedTokenId: string) => {
-    if (!token || !txHash) return;
+  const confirmPublish = async (parsedTokenId: string, transactionHash: string) => {
+    if (!token) return;
 
     setPhase('finalizing');
+    // Update txHash state for UI display
+    setTxHash(transactionHash);
 
     // CRITICAL: Save to store BEFORE attempting confirm
     // This ensures we can retry if the user closes the browser
     setPending({
+      type: 'publish',
       agentId: agent.id,
-      txHash,
+      txHash: transactionHash,
       chainId,
       tokenId: parsedTokenId,
     });
@@ -181,10 +196,11 @@ export function PublishModal({ open, onOpenChange, agent, hasSigningKey, onPubli
             Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
-            txHash,
+            txHash: transactionHash,
             chainId,
             tokenId: parsedTokenId,
           }),
+          keepalive: true, // Survives page close
         });
 
         if (res.status === 503 && attempt < 2) {
@@ -196,15 +212,14 @@ export function PublishModal({ open, onOpenChange, agent, hasSigningKey, onPubli
         if (!res.ok) throw new Error(data.error);
 
         // Success! Clear pending and update state
-        clearPending();
+        clearPending('publish');
         setTokenId(data.tokenId);
         setPhase('success');
-        onPublished(data.tokenId, txHash, chainId);
+        onPublished(data.tokenId, transactionHash, chainId);
         return;
       } catch {
         if (attempt === 2) {
-          // After all retries failed, keep pending in store
-          // Show error but inform user it may still work on refresh
+          // After all retries failed, keep pending in store for retry on refresh
           setError('Could not confirm. The transaction succeeded - please refresh the page to complete.');
           setPhase('error');
         }
@@ -329,7 +344,9 @@ export function PublishModal({ open, onOpenChange, agent, hasSigningKey, onPubli
 
     // Success state
     if (phase === 'success') {
-      const shareUrl = typeof window !== 'undefined' ? `${window.location.origin}/marketplace/${agent.id}` : '';
+      const shareUrl = typeof window !== 'undefined' && agent.ownerHandle && agent.slug
+        ? `${window.location.origin}/${agent.ownerHandle}/${agent.slug}`
+        : '';
       const shareText = `I just published "${agent.name}" on Agentokratia! Check it out:`;
 
       const handleCopyLink = () => {

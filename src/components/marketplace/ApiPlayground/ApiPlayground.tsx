@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { Play, Copy, Check, Loader2, Wallet, Shield, AlertTriangle, Zap, Plus, Trash2, Star, CheckCircle2, ExternalLink, FileText, MessageSquare, ChevronRight } from 'lucide-react';
 import { useAccount, useChainId, useSwitchChain } from 'wagmi';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
@@ -8,6 +8,7 @@ import { Button } from '@/components/ui';
 import { useAgentCall } from '@/lib/x402/useAgentCall';
 import { useAllNetworks, useNetworkConfig, getExplorerTxUrl, getNetworkName } from '@/lib/network/client';
 import { formatUsdc } from '@/lib/utils/format';
+import { highlightJson, formatHttpStatus, highlightHeaders } from '@/lib/utils/syntax';
 import type { X402Response } from '@/lib/x402/client';
 import { ReviewForm } from '../ReviewForm/ReviewForm';
 import styles from './ApiPlayground.module.css';
@@ -26,7 +27,8 @@ interface JsonSchema {
 }
 
 interface ApiPlaygroundProps {
-  agentId: string;
+  ownerHandle: string;
+  agentSlug: string;
   agentName: string;
   pricePerCall: number;
   inputSchema: JsonSchema | null;
@@ -49,7 +51,8 @@ const PROGRESS_STEPS = [
 ] as const;
 
 export function ApiPlayground({
-  agentId,
+  ownerHandle,
+  agentSlug,
   agentName,
   pricePerCall,
   inputSchema,
@@ -70,7 +73,7 @@ export function ApiPlayground({
   // Playground state
   const [activeTab, setActiveTab] = useState<PlaygroundTab>('params');
   const [responseTab, setResponseTab] = useState<ResponseTab>('body');
-  const [paramValues, setParamValues] = useState<Record<string, string | number | boolean>>({});
+  const [paramValues, setParamValues] = useState<Record<string, string | number | boolean | undefined>>({});
   const [customHeaders, setCustomHeaders] = useState<Array<{ key: string; value: string }>>([]);
   const [state, setState] = useState<PlaygroundState>('idle');
   const [response, setResponse] = useState<string>('');
@@ -90,6 +93,21 @@ export function ApiPlayground({
   const [paymentTxHash, setPaymentTxHash] = useState<string | null>(null);
   const [paidAmount, setPaidAmount] = useState<number | null>(null);
 
+  // Refs for cleanup and race condition prevention
+  const mountedRef = useRef(true);
+  const payingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const executingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      if (payingTimeoutRef.current) clearTimeout(payingTimeoutRef.current);
+      if (executingTimeoutRef.current) clearTimeout(executingTimeoutRef.current);
+    };
+  }, []);
+
   // Custom header management
   const addCustomHeader = () => {
     setCustomHeaders((prev) => [...prev, { key: '', value: '' }]);
@@ -105,8 +123,9 @@ export function ApiPlayground({
     );
   };
 
-  // Full endpoint URL
-  const fullEndpoint = useMemo(() => `https://api.agentokratia.com/call/${agentId}`, [agentId]);
+  // Full endpoint URL - uses handle/slug format
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://agentokratia.com';
+  const fullEndpoint = useMemo(() => `${baseUrl}/api/v1/call/${ownerHandle}/${agentSlug}`, [baseUrl, ownerHandle, agentSlug]);
 
   // Parse schema properties
   const schemaProperties = useMemo(() => {
@@ -122,27 +141,34 @@ export function ApiPlayground({
   }, [inputSchema]);
 
   // Initialize param values from schema
+  // Only set defaults for required fields or fields with explicit defaults
   useEffect(() => {
-    const initial: Record<string, string | number | boolean> = {};
+    const initial: Record<string, string | number | boolean | undefined> = {};
     schemaProperties.forEach((prop) => {
       if (prop.default !== undefined) {
         initial[prop.name] = prop.default as string | number | boolean;
-      } else if (prop.type === 'string') {
-        initial[prop.name] = '';
-      } else if (prop.type === 'number' || prop.type === 'integer') {
-        initial[prop.name] = 0;
-      } else if (prop.type === 'boolean') {
-        initial[prop.name] = false;
+      } else if (prop.required) {
+        // Only initialize required fields without defaults
+        if (prop.type === 'string') {
+          initial[prop.name] = prop.enum ? prop.enum[0] : ''; // Auto-select first enum for required
+        } else if (prop.type === 'number' || prop.type === 'integer') {
+          initial[prop.name] = undefined; // Leave empty, user must fill
+        } else if (prop.type === 'boolean') {
+          initial[prop.name] = false;
+        }
       }
+      // Optional fields without defaults: leave undefined (won't appear in request)
     });
     setParamValues(initial);
   }, [schemaProperties]);
 
-  // Build request JSON
+  // Build request JSON - only include fields with actual values
   const requestJson = useMemo(() => {
     const body: Record<string, unknown> = {};
     Object.entries(paramValues).forEach(([key, value]) => {
-      if (value !== '' && value !== 0) {
+      // Include if value is set and not empty string
+      // Include 0 and false as valid values, exclude undefined and empty string
+      if (value !== undefined && value !== '') {
         body[key] = value;
       }
     });
@@ -151,6 +177,10 @@ export function ApiPlayground({
 
   // Make API call with progress tracking
   const handleSendRequest = useCallback(async () => {
+    // Clear any existing timeouts to prevent race conditions
+    if (payingTimeoutRef.current) clearTimeout(payingTimeoutRef.current);
+    if (executingTimeoutRef.current) clearTimeout(executingTimeoutRef.current);
+
     // Reset all state
     setResponse('');
     setResponseHeaders({});
@@ -166,27 +196,37 @@ export function ApiPlayground({
     // Step 1: Signing
     setState('signing');
 
+    // Track if request completed to prevent timeout state updates after completion
+    let requestCompleted = false;
+
     try {
       const startTime = Date.now();
 
       const body: Record<string, unknown> = {};
       Object.entries(paramValues).forEach(([key, value]) => {
-        if (value !== '' && value !== 0) {
+        if (value !== undefined && value !== '') {
           body[key] = value;
         }
       });
 
       // Step 2: After signing, show paying state
-      // Note: The actual state transitions happen inside agentCall.call
-      // We simulate the progression here for better UX
-      const payingTimeout = setTimeout(() => setState('paying'), 500);
-      const executingTimeout = setTimeout(() => setState('executing'), 2000);
+      // Only update state if request hasn't completed yet and component is mounted
+      payingTimeoutRef.current = setTimeout(() => {
+        if (!requestCompleted && mountedRef.current) setState('paying');
+      }, 500);
+      executingTimeoutRef.current = setTimeout(() => {
+        if (!requestCompleted && mountedRef.current) setState('executing');
+      }, 2000);
 
-      const result = await agentCall.call(agentId, body);
+      const result = await agentCall.call(ownerHandle, agentSlug, body);
 
-      // Clear timeouts if call completes faster
-      clearTimeout(payingTimeout);
-      clearTimeout(executingTimeout);
+      // Mark request as completed to prevent timeout state updates
+      requestCompleted = true;
+      if (payingTimeoutRef.current) clearTimeout(payingTimeoutRef.current);
+      if (executingTimeoutRef.current) clearTimeout(executingTimeoutRef.current);
+
+      // Guard all state updates against unmount
+      if (!mountedRef.current) return;
 
       const elapsed = Date.now() - startTime;
       setResponseTime(elapsed);
@@ -205,10 +245,17 @@ export function ApiPlayground({
         setResponseSize(`${(new Blob([responseStr]).size / 1024).toFixed(1)} KB`);
         setState('success');
 
-        // Store feedback auth for review form (only if agent has tokenId)
+        // Store feedback auth for review form (only if agent has tokenId and not expired)
+        // Note: feedbackExpiry is a Unix timestamp in seconds (string)
         if (result.feedbackAuth && result.feedbackExpiry && tokenId) {
-          setFeedbackAuth(result.feedbackAuth);
-          setFeedbackExpiry(result.feedbackExpiry);
+          const expirySeconds = parseInt(result.feedbackExpiry, 10);
+          const expiryTimeMs = expirySeconds * 1000; // Convert to milliseconds
+          const now = Date.now();
+          // Only store if expiry is valid and in the future
+          if (!isNaN(expirySeconds) && expiryTimeMs > now) {
+            setFeedbackAuth(result.feedbackAuth);
+            setFeedbackExpiry(result.feedbackExpiry);
+          }
         }
       } else {
         const errorResponse = {
@@ -229,16 +276,41 @@ export function ApiPlayground({
         }),
       });
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Request failed';
-      // User rejected = go back to idle, not error
+      // Mark request as completed
+      requestCompleted = true;
+      if (payingTimeoutRef.current) clearTimeout(payingTimeoutRef.current);
+      if (executingTimeoutRef.current) clearTimeout(executingTimeoutRef.current);
+
+      // Guard against unmount
+      if (!mountedRef.current) return;
+
+      const error = err instanceof Error ? err : new Error('Unknown error');
+      const message = error.message;
+
+      // Log error with context for debugging
+      console.error('[ApiPlayground] Request failed:', {
+        error: error.message,
+        ownerHandle,
+        agentSlug,
+        timestamp: new Date().toISOString(),
+      });
+
+      // User rejected wallet action = go back to idle, not error
       if (message.includes('rejected') || message.includes('User rejected') || message.includes('denied')) {
         setState('idle');
         return;
       }
-      setResponse(JSON.stringify({ error: message }, null, 2));
+
+      // Provide structured error response with context
+      const errorPayload = {
+        error: message,
+        code: error.name !== 'Error' ? error.name : undefined,
+        timestamp: new Date().toISOString(),
+      };
+      setResponse(JSON.stringify(errorPayload, null, 2));
       setState('error');
     }
-  }, [paramValues, agentId, agentCall, pricePerCall, tokenId]);
+  }, [paramValues, ownerHandle, agentSlug, agentCall, pricePerCall, tokenId]);
 
   // Get current step index for progress indicator
   const getCurrentStep = () => {
@@ -258,30 +330,6 @@ export function ApiPlayground({
 
   // Format price from cents - use centralized util
   const formatPrice = (priceCents: number) => formatUsdc(priceCents);
-
-  const getStatusText = (status: number) => {
-    const statusMap: Record<number, string> = {
-      200: '200 OK',
-      201: '201 Created',
-      400: '400 Bad Request',
-      401: '401 Unauthorized',
-      402: '402 Payment Required',
-      500: '500 Server Error',
-    };
-    return statusMap[status] || `${status}`;
-  };
-
-  // Syntax highlight JSON
-  const highlightJson = (json: string) => {
-    return json
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"([^"]+)":/g, '<span class="key">"$1"</span>:')
-      .replace(/: "([^"]*)"/g, ': <span class="string">"$1"</span>')
-      .replace(/: (\d+\.?\d*)/g, ': <span class="number">$1</span>')
-      .replace(/: (true|false)/g, ': <span class="bool">$1</span>');
-  };
 
   // Not connected state
   if (!isConnected) {
@@ -435,7 +483,7 @@ export function ApiPlayground({
                   <div className={styles.paramInfo}>
                     <div className={styles.paramName}>
                       {prop.name}
-                      {prop.required && <span className={styles.required}>*</span>}
+                      {prop.required && <span className={styles.required}>required</span>}
                     </div>
                     <div className={styles.paramType}>{prop.type}</div>
                   </div>
@@ -443,9 +491,15 @@ export function ApiPlayground({
                     {prop.enum ? (
                       <select
                         className={styles.paramSelect}
-                        value={String(paramValues[prop.name] || '')}
-                        onChange={(e) => setParamValues((prev) => ({ ...prev, [prop.name]: e.target.value }))}
+                        value={String(paramValues[prop.name] ?? '')}
+                        onChange={(e) => setParamValues((prev) => ({
+                          ...prev,
+                          [prop.name]: e.target.value || undefined
+                        }))}
                       >
+                        {!prop.required && (
+                          <option value="">Select {prop.name}...</option>
+                        )}
                         {prop.enum.map((opt) => (
                           <option key={opt} value={opt}>{opt}</option>
                         ))}
@@ -453,9 +507,15 @@ export function ApiPlayground({
                     ) : prop.type === 'boolean' ? (
                       <select
                         className={styles.paramSelect}
-                        value={String(paramValues[prop.name] || 'false')}
-                        onChange={(e) => setParamValues((prev) => ({ ...prev, [prop.name]: e.target.value === 'true' }))}
+                        value={paramValues[prop.name] === undefined ? '' : String(paramValues[prop.name])}
+                        onChange={(e) => setParamValues((prev) => ({
+                          ...prev,
+                          [prop.name]: e.target.value === '' ? undefined : e.target.value === 'true'
+                        }))}
                       >
+                        {!prop.required && (
+                          <option value="">Select...</option>
+                        )}
                         <option value="false">false</option>
                         <option value="true">true</option>
                       </select>
@@ -463,15 +523,23 @@ export function ApiPlayground({
                       <input
                         type="number"
                         className={styles.paramInput}
-                        value={paramValues[prop.name] as number || 0}
-                        onChange={(e) => setParamValues((prev) => ({ ...prev, [prop.name]: parseInt(e.target.value) || 0 }))}
+                        placeholder={prop.required ? `Enter ${prop.name}` : 'Optional'}
+                        value={typeof paramValues[prop.name] === 'number' ? (paramValues[prop.name] as number) : ''}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          const parsed = val === '' ? undefined : parseInt(val, 10);
+                          setParamValues((prev) => ({
+                            ...prev,
+                            [prop.name]: Number.isNaN(parsed) ? undefined : parsed
+                          }));
+                        }}
                       />
                     ) : (
                       <input
                         type="text"
                         className={styles.paramInput}
                         placeholder={`Enter ${prop.name}...`}
-                        value={paramValues[prop.name] as string || ''}
+                        value={typeof paramValues[prop.name] === 'string' ? (paramValues[prop.name] as string) : ''}
                         onChange={(e) => setParamValues((prev) => ({ ...prev, [prop.name]: e.target.value }))}
                       />
                     )}
@@ -683,7 +751,7 @@ export function ApiPlayground({
             <div className={styles.responseContent}>
               <div className={styles.responseHeader}>
                 <span className={`${styles.statusBadge} ${styles.success}`}>
-                  {httpStatus ? getStatusText(httpStatus) : '200 OK'}
+                  {httpStatus ? formatHttpStatus(httpStatus) : '200 OK'}
                 </span>
                 <div className={styles.responseTabs}>
                   <button
@@ -703,7 +771,7 @@ export function ApiPlayground({
               <pre className={styles.responseBody} dangerouslySetInnerHTML={{
                 __html: responseTab === 'body'
                   ? highlightJson(response)
-                  : Object.entries(responseHeaders).map(([k, v]) => `<span class="key">${k}</span>: ${v}`).join('\n')
+                  : highlightHeaders(responseHeaders)
               }} />
             </div>
           )}
@@ -756,7 +824,8 @@ export function ApiPlayground({
           {completionTab === 'review' && feedbackAuth && tokenId && (
             <div className={styles.reviewContent}>
               <ReviewForm
-                agentId={agentId}
+                ownerHandle={ownerHandle}
+                agentSlug={agentSlug}
                 tokenId={tokenId}
                 feedbackAuth={feedbackAuth}
                 feedbackExpiry={feedbackExpiry!}
@@ -799,7 +868,7 @@ export function ApiPlayground({
         <div className={styles.responsePanel}>
           <div className={styles.responseStatusBar}>
             <span className={`${styles.statusCode} ${styles.error}`}>
-              {httpStatus ? getStatusText(httpStatus) : 'Error'}
+              {httpStatus ? formatHttpStatus(httpStatus) : 'Error'}
             </span>
           </div>
           <pre className={styles.responseBody} dangerouslySetInnerHTML={{ __html: highlightJson(response) }} />

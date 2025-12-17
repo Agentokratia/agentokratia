@@ -8,6 +8,7 @@ import { centsToDollars } from '@/lib/utils/format';
 interface CreatorAgent {
   id: string;
   name: string;
+  slug: string;
   description: string | null;
   category: string;
   pricePerCall: number;
@@ -118,6 +119,7 @@ export async function GET(
       agents: agents.map((agent) => ({
         id: agent.id,
         name: agent.name,
+        slug: agent.slug,
         description: agent.description,
         category: agent.category,
         pricePerCall: agent.price_per_call,

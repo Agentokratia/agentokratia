@@ -18,8 +18,6 @@ const priceSuggestions = [0.001, 0.01, 0.05, 0.10, 0.50];
 export default function PricingTab({ agent, onSave, saving }: Props) {
   // pricePerCall comes from API in cents - store as cents, display with formatUsdc
   const [priceCents, setPriceCents] = useState(agent.pricePerCall || 5); // default 5 cents = $0.05
-  const [freeTierEnabled, setFreeTierEnabled] = useState(false);
-  const [freeTierCalls, setFreeTierCalls] = useState(10);
 
   const handleSave = () => {
     onSave({ pricePerCall: priceCents });
@@ -79,36 +77,6 @@ export default function PricingTab({ agent, onSave, saving }: Props) {
             <p className={styles.formHint} style={{ marginTop: '16px' }}>
               Most agents charge $0.01-$0.10 per call.
             </p>
-          </div>
-
-          {/* Free Tier */}
-          <div className={styles.securityItem} style={{ borderBottom: 'none', paddingBottom: 0, marginTop: '16px' }}>
-            <div className={styles.securityItemInfo}>
-              <div className={styles.securityItemTitle}>Free tier</div>
-              <div className={styles.securityItemDesc}>
-                Let users try before paying.
-              </div>
-              {freeTierEnabled && (
-                <div className={styles.securityItemInput}>
-                  <input
-                    type="number"
-                    value={freeTierCalls}
-                    onChange={(e) => setFreeTierCalls(Number(e.target.value))}
-                    min={1}
-                    max={100}
-                  />
-                  <span>free/month</span>
-                </div>
-              )}
-            </div>
-            <label className={styles.toggle}>
-              <input
-                type="checkbox"
-                checked={freeTierEnabled}
-                onChange={(e) => setFreeTierEnabled(e.target.checked)}
-              />
-              <span className={styles.toggleSlider} />
-            </label>
           </div>
         </div>
 

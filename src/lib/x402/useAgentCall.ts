@@ -24,7 +24,7 @@ export interface UseAgentCallResult<T = unknown> {
   } | null;
 
   // Actions
-  call: (agentId: string, body: unknown) => Promise<X402Response<T>>;
+  call: (handle: string, slug: string, body: unknown) => Promise<X402Response<T>>;
   reset: () => void;
 
   // Computed
@@ -53,7 +53,7 @@ export function useAgentCall<T = unknown>(): UseAgentCallResult<T> {
     setPaymentInfo(null);
   }, []);
 
-  const call = useCallback(async (agentId: string, body: unknown): Promise<X402Response<T>> => {
+  const call = useCallback(async (handle: string, slug: string, body: unknown): Promise<X402Response<T>> => {
     reset();
     setState('loading');
     setError(null);
@@ -74,8 +74,7 @@ export function useAgentCall<T = unknown>(): UseAgentCallResult<T> {
         return signPayment(paymentRequired);
       };
 
-      // Make the call with payment signing (single POST, retries with payment if 402)
-      const result = await callAgentWithPayment<T>(agentId, body, createPaymentPayload);
+      const result = await callAgentWithPayment<T>(handle, slug, body, createPaymentPayload);
 
       setResponse(result);
 

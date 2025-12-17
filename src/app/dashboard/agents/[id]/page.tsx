@@ -35,12 +35,13 @@ import SecurityTab from './tabs/SecurityTab';
 import ReviewsTab from './tabs/ReviewsTab';
 import { useAllNetworks, getExplorerUrlForChain } from '@/lib/network/client';
 import { formatCurrency } from '@/lib/utils/format';
-import { usePendingPublishRetry } from '@/hooks';
+import { usePendingTransactionRetryByType } from '@/hooks';
 import styles from './page.module.css';
 
 export interface Agent {
   id: string;
   name: string;
+  slug: string;
   description: string | null;
   category: string;
   endpointUrl: string;
@@ -63,13 +64,13 @@ export interface Agent {
   erc8004ChainId: number | null;
   // Reviews/Feedback - check on-chain via isApprovedForAll
   feedbackSignerAddress: string | null;
+  // Owner handle for URL construction
+  ownerHandle: string | null;
 }
 
 interface SecretKeyInfo {
   hasKey: boolean;
-  publicKey: string | null;
-  publicKeyJwk: object | null;
-  keyId: string | null;
+  secret: string | null;
   createdAt: string | null;
 }
 
@@ -169,12 +170,15 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
     },
   });
 
-  // Auto-retry pending publish confirmations on page load
-  const { isRetrying: isRetryingPublish, retryResult } = usePendingPublishRetry((result) => {
-    if (result.agentId === id) {
-      setToast(`Published! Token #${result.tokenId}`);
-      refetchAgent();
-    }
+  // Auto-retry pending transaction confirmations on page load
+  usePendingTransactionRetryByType('publish', () => {
+    setToast('Published successfully!');
+    refetchAgent();
+  });
+
+  usePendingTransactionRetryByType('enable_reviews', () => {
+    setToast('Reviews enabled!');
+    refetchAgent();
   });
 
   // Check on-chain if reviews are enabled (via isApprovedForAll)
@@ -231,8 +235,10 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
   const saving = updateMutation.isPending;
 
   const copyAgentUrl = async () => {
-    await navigator.clipboard.writeText(`${window.location.origin}/api/call/${id}`);
-    showToast('URL copied!');
+    if (agent?.ownerHandle && agent?.slug) {
+      await navigator.clipboard.writeText(`${window.location.origin}/api/v1/call/${agent.ownerHandle}/${agent.slug}`);
+      showToast('URL copied!');
+    }
   };
 
   const showToast = (message: string) => {
@@ -307,7 +313,7 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
             </div>
           </div>
           <div className={styles.headerActions}>
-            <button className={styles.previewLink} onClick={() => window.open(`/marketplace/${id}`, '_blank')}>
+            <button className={styles.previewLink} onClick={() => agent?.ownerHandle && agent?.slug && window.open(`/${agent.ownerHandle}/${agent.slug}`, '_blank')}>
               <ExternalLink size={16} />
               Preview
             </button>
@@ -432,7 +438,7 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
 
         {/* Connection Tab */}
         {activeTab === 'connection' && (
-          <ConnectionTab agent={agent} onSave={updateAgent} saving={saving} />
+          <ConnectionTab agent={agent} onSave={updateAgent} saving={saving} secretKey={secretKey?.secret ?? null} />
         )}
 
         {/* Pricing Tab */}
@@ -477,10 +483,12 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
         agent={{
           id: agent.id,
           name: agent.name,
+          slug: agent.slug,
           description: agent.description,
           endpointUrl: agent.endpointUrl,
           pricePerCall: agent.pricePerCall,
           status: agent.status,
+          ownerHandle: agent.ownerHandle,
         }}
         hasSigningKey={secretKey?.hasKey || false}
         onPublished={handlePublished}
@@ -500,11 +508,16 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
           agentName={agent.name}
           feedbackSignerAddress={agent.feedbackSignerAddress}
           chainId={agent.erc8004ChainId}
-          onSuccess={() => {
+          onSuccess={async () => {
             // Refetch agent to get updated feedbackSignerAddress
-            // useReviewsEnabled will automatically re-query when props change
-            refetchAgent();
+            await refetchAgent();
+            // Close modal first, then refetch reviews status after short delay
+            setShowEnableReviewsModal(false);
             showToast('Reviews enabled!');
+            // Refetch on-chain status after state updates
+            setTimeout(() => {
+              refetchReviews();
+            }, 500);
           }}
         />
       )}
