@@ -137,10 +137,26 @@
 }
 
 .connectDesc {
-  font-size: 18px;
+  font-size: 15px;
   color: var(--stone);
-  margin: 0 0 32px 0;
+  margin: 0 0 16px 0;
   line-height: 1.5;
+}
+
+.connectHint {
+  font-size: 13px;
+  color: var(--stone);
+  margin: 12px 0 0 0;
+}
+
+.connectHint a {
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.connectHint a:hover {
+  color: #22C55E;
 }
 
 .connectAction {

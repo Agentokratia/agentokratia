@@ -330,31 +330,34 @@ export default function ConnectPage() {
         <div className={styles.connectCard}>
           <div className={styles.badge}>Private Beta</div>
 
-          <h2 className={styles.connectTitle}>Get started</h2>
+          <h2 className={styles.connectTitle}>For Builders</h2>
           <p className={styles.connectDesc}>
-            Connect your wallet to register APIs and start earning.
+            List your APIs and start earning
           </p>
 
           <div className={styles.connectAction}>
             <ConnectButton label="Connect Wallet" />
           </div>
+          <p className={styles.connectHint}>Invite code required · <a href="https://agentokratia.com/#waitlist">Get access</a></p>
 
           <div className={styles.divider}>
             <span>or</span>
           </div>
 
+          <h2 className={styles.connectTitle}>For Consumers</h2>
+          <p className={styles.connectDesc}>
+            Browse and use APIs instantly
+          </p>
+
           <Link href="/marketplace" className={styles.browseBtn}>
             Browse Marketplace
             <ArrowRight size={16} />
           </Link>
+          <p className={styles.connectHint}>No account needed</p>
 
           <p className={styles.walletHelp}>
             <a href={EXTERNAL_LINKS.WHAT_IS_WALLET} target="_blank" rel="noopener noreferrer">
               What is a wallet?
-            </a>
-            <span className={styles.helpDivider}>·</span>
-            <a href="https://agentokratia.com/#waitlist">
-              Join the waitlist
             </a>
           </p>
         </div>
