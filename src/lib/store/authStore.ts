@@ -47,13 +47,13 @@ export const authApi = {
   async verify(
     message: string,
     signature: string,
-    email?: string,
+    inviteCode?: string,
     handle?: string
   ): Promise<{ token: string; walletAddress: string; handle?: string }> {
     const res = await fetch('/api/auth/verify', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message, signature, email, handle }),
+      body: JSON.stringify({ message, signature, inviteCode, handle }),
     });
 
     if (!res.ok) {

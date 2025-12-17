@@ -310,8 +310,8 @@
   cursor: not-allowed;
 }
 
-/* Email form */
-.emailForm {
+/* Invite form */
+.inviteForm {
   width: 100%;
   display: flex;
   flex-direction: column;
@@ -319,22 +319,30 @@
   margin: var(--space-md) 0;
 }
 
-.emailInput {
+.inviteInput {
   width: 100%;
-  padding: 12px 16px;
-  font-size: 15px;
+  padding: 14px 16px;
+  font-size: 16px;
+  font-family: var(--font-mono);
+  font-weight: 500;
+  letter-spacing: 1px;
+  text-align: center;
+  text-transform: uppercase;
   border: 1px solid var(--sand);
   border-radius: var(--radius-sm);
   outline: none;
   transition: border-color 0.15s;
+  background: var(--cloud);
 }
 
-.emailInput:focus {
+.inviteInput:focus {
   border-color: var(--ink);
+  background: var(--white);
 }
 
-.emailInput::placeholder {
+.inviteInput::placeholder {
   color: var(--stone);
+  letter-spacing: 2px;
 }
 
 .cardError {

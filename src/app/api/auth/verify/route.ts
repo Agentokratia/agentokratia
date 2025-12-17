@@ -20,7 +20,7 @@ function getChain(chainId: number) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { message, signature, email, handle } = await request.json();
+    const { message, signature, inviteCode, handle } = await request.json();
 
     if (!message || !signature) {
       return NextResponse.json(
@@ -97,15 +97,15 @@ export async function POST(request: NextRequest) {
     let user: DbUser;
 
     if (!existingUser) {
-      // NEW USER - require whitelisted email and handle
-      if (!email || !handle) {
+      // NEW USER - require invite code and handle
+      if (!inviteCode || !handle) {
         return NextResponse.json(
-          { error: 'Email and handle required for registration', code: 'EMAIL_REQUIRED' },
+          { error: 'Invite code and handle required for registration', code: 'INVITE_REQUIRED' },
           { status: 403 }
         );
       }
 
-      const normalizedEmail = email.toLowerCase().trim();
+      const normalizedInviteCode = inviteCode.toUpperCase().trim();
       const normalizedHandle = handle.toLowerCase().trim();
 
       // Validate handle format
@@ -117,73 +117,53 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Check handle uniqueness
-      const { data: existingHandle } = await supabaseAdmin
-        .from('users')
-        .select('id')
-        .eq('handle', normalizedHandle)
-        .single();
-
-      if (existingHandle) {
-        return NextResponse.json(
-          { error: 'Handle already taken', code: 'HANDLE_TAKEN' },
-          { status: 400 }
-        );
+      // Atomic registration: validate invite, create user, claim invite in single transaction
+      interface RegisterResult {
+        user_id: string | null;
+        user_email: string | null;
+        error_code: string | null;
+        error_message: string | null;
       }
 
-      // Check whitelist
-      const { data: invite } = await supabaseAdmin
-        .from('whitelist_invites')
-        .select('*')
-        .eq('email', normalizedEmail)
-        .is('claimed_by', null)
-        .single();
-
-      if (!invite) {
-        return NextResponse.json(
-          { error: 'Email not on whitelist', code: 'EMAIL_NOT_WHITELISTED' },
-          { status: 403 }
-        );
-      }
-
-      // Check invite not expired
-      if (invite.expires_at && new Date(invite.expires_at) < new Date()) {
-        return NextResponse.json(
-          { error: 'Invite expired', code: 'INVITE_EXPIRED' },
-          { status: 403 }
-        );
-      }
-
-      // Create user with whitelist status and handle
-      const { data: newUser, error: createError } = await supabaseAdmin
-        .from('users')
-        .insert({
-          wallet_address: normalizedAddress,
-          email: normalizedEmail,
-          handle: normalizedHandle,
-          is_whitelisted: true,
-          whitelisted_at: new Date().toISOString(),
-          invited_by: invite.invited_by,
+      const { data: result, error: rpcError } = await supabaseAdmin
+        .rpc('register_user_with_invite', {
+          p_wallet_address: normalizedAddress,
+          p_handle: normalizedHandle,
+          p_invite_code: normalizedInviteCode,
         })
-        .select()
-        .single();
+        .single<RegisterResult>();
 
-      if (createError || !newUser) {
-        console.error('Failed to create user:', createError);
+      if (rpcError || !result) {
+        console.error('Registration RPC error:', rpcError);
         return NextResponse.json(
           { error: 'Failed to create user' },
           { status: 500 }
         );
       }
 
-      // Mark invite as claimed
-      await supabaseAdmin
-        .from('whitelist_invites')
-        .update({
-          claimed_by: newUser.id,
-          claimed_at: new Date().toISOString(),
-        })
-        .eq('id', invite.id);
+      // Check for business logic errors from the function
+      if (result.error_code) {
+        const statusCode = result.error_code === 'HANDLE_TAKEN' ? 400 : 403;
+        return NextResponse.json(
+          { error: result.error_message, code: result.error_code },
+          { status: statusCode }
+        );
+      }
+
+      // Fetch the created user
+      const { data: newUser, error: fetchError } = await supabaseAdmin
+        .from('users')
+        .select('*')
+        .eq('id', result.user_id)
+        .single();
+
+      if (fetchError || !newUser) {
+        console.error('Failed to fetch created user:', fetchError);
+        return NextResponse.json(
+          { error: 'Failed to create user' },
+          { status: 500 }
+        );
+      }
 
       user = newUser as DbUser;
     } else {
@@ -191,10 +171,15 @@ export async function POST(request: NextRequest) {
     }
 
     // Mark nonce as used only after successful authentication
-    await supabaseAdmin
+    const { error: nonceUpdateError } = await supabaseAdmin
       .from('auth_nonces')
       .update({ used_at: new Date().toISOString(), wallet_address: normalizedAddress })
       .eq('id', nonceData.id);
+
+    if (nonceUpdateError) {
+      // Log but don't fail - nonce has expiration anyway
+      console.error('Failed to mark nonce as used:', nonceUpdateError);
+    }
 
     // Create JWT token
     const token = await createToken(user.id, normalizedAddress);

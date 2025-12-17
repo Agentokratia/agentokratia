@@ -12,7 +12,10 @@ import { createSiweMessage } from '@/lib/auth/siwe';
 import { EXTERNAL_LINKS } from '@/lib/utils/constants';
 import styles from './page.module.css';
 
-type SigningState = 'idle' | 'signing' | 'rejected' | 'error' | 'email_required';
+type SigningState = 'idle' | 'signing' | 'submitting' | 'rejected' | 'error' | 'invite_required';
+
+// Delay before auto-triggering SIWE sign (allows wallet UI to settle)
+const SIWE_SIGN_DELAY_MS = 300;
 
 export default function ConnectPage() {
   const { address, isConnected } = useAccount();
@@ -25,7 +28,7 @@ export default function ConnectPage() {
 
   const [signingState, setSigningState] = useState<SigningState>('idle');
   const [errorMessage, setErrorMessage] = useState<string>('');
-  const [email, setEmail] = useState<string>('');
+  const [inviteCode, setInviteCode] = useState<string>('');
   const [handle, setHandle] = useState<string>('');
   const [pendingAuth, setPendingAuth] = useState<{ message: string; signature: string } | null>(null);
   const isSigningRef = useRef(false);
@@ -58,10 +61,10 @@ export default function ConnectPage() {
         router.push('/dashboard');
       } catch (verifyErr: unknown) {
         const error = verifyErr as Error & { code?: string };
-        if (error.code === 'EMAIL_REQUIRED') {
-          // New user - reuse the same signature for email registration
+        if (error.code === 'INVITE_REQUIRED') {
+          // New user - reuse the same signature for invite code registration
           setPendingAuth({ message, signature });
-          setSigningState('email_required');
+          setSigningState('invite_required');
         } else {
           throw verifyErr;
         }
@@ -80,42 +83,42 @@ export default function ConnectPage() {
     }
   }, [address, chainId, signMessageAsync, setAuth, router]);
 
-  const handleEmailSubmit = useCallback(async (e: React.FormEvent) => {
+  const handleInviteSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!pendingAuth || !email.trim() || !handle.trim()) return;
+    if (!pendingAuth || !inviteCode.trim() || !handle.trim()) return;
 
-    setSigningState('signing');
+    setSigningState('submitting');
     setErrorMessage('');
 
     try {
       const { token: jwtToken, walletAddress: verifiedAddress } = await authApi.verify(
         pendingAuth.message,
         pendingAuth.signature,
-        email.trim(),
+        inviteCode.trim(),
         handle.trim()
       );
       setAuth(jwtToken, verifiedAddress);
       router.push('/dashboard');
     } catch (err: unknown) {
       const error = err as Error & { code?: string };
-      if (error.code === 'EMAIL_NOT_WHITELISTED') {
-        setSigningState('email_required');
-        setErrorMessage('This email is not on the whitelist');
+      if (error.code === 'INVALID_INVITE_CODE') {
+        setSigningState('invite_required');
+        setErrorMessage('Invalid or already used invite code');
       } else if (error.code === 'INVITE_EXPIRED') {
-        setSigningState('email_required');
-        setErrorMessage('Your invite has expired');
+        setSigningState('invite_required');
+        setErrorMessage('Your invite code has expired');
       } else if (error.code === 'INVALID_HANDLE') {
-        setSigningState('email_required');
+        setSigningState('invite_required');
         setErrorMessage(error.message || 'Invalid handle');
       } else if (error.code === 'HANDLE_TAKEN') {
-        setSigningState('email_required');
+        setSigningState('invite_required');
         setErrorMessage('This handle is already taken');
       } else {
         setSigningState('error');
         setErrorMessage(error.message || 'Registration failed');
       }
     }
-  }, [pendingAuth, email, handle, setAuth, router]);
+  }, [pendingAuth, inviteCode, handle, setAuth, router]);
 
   useEffect(() => {
     if (isConnected && address && signingState === 'idle') {
@@ -127,7 +130,7 @@ export default function ConnectPage() {
       if (hasInitiatedRef.current) return;
       hasInitiatedRef.current = true;
 
-      const timer = setTimeout(() => performSiweSign(), 300);
+      const timer = setTimeout(() => performSiweSign(), SIWE_SIGN_DELAY_MS);
       return () => clearTimeout(timer);
     }
     if (!isConnected) {
@@ -157,6 +160,19 @@ export default function ConnectPage() {
           <h1 className={styles.cardTitle}>Check your wallet</h1>
           <p className={styles.cardDesc}>Approve the sign-in request to continue</p>
           <p className={styles.cardHint}>Free · No transaction required</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (isConnected && signingState === 'submitting') {
+    return (
+      <div className={styles.pageCentered}>
+        <div className={styles.card}>
+          <Logo size={48} />
+          <div className={styles.spinner} />
+          <h1 className={styles.cardTitle}>Creating account</h1>
+          <p className={styles.cardDesc}>Just a moment...</p>
         </div>
       </div>
     );
@@ -194,19 +210,29 @@ export default function ConnectPage() {
     );
   }
 
-  if (isConnected && signingState === 'email_required') {
+  if (isConnected && signingState === 'invite_required') {
     return (
       <div className={styles.pageCentered}>
         <div className={styles.card}>
           <Logo size={48} />
           <h1 className={styles.cardTitle}>Complete registration</h1>
           <p className={styles.cardDesc}>
-            Choose your handle and enter your whitelisted email
+            Enter your invite code and choose your handle
           </p>
           {errorMessage && (
             <p className={styles.cardError}>{errorMessage}</p>
           )}
-          <form onSubmit={handleEmailSubmit} className={styles.emailForm}>
+          <form onSubmit={handleInviteSubmit} className={styles.inviteForm}>
+            <input
+              type="text"
+              value={inviteCode}
+              onChange={(e) => setInviteCode(e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, ''))}
+              placeholder="INV-XXXXXXXX"
+              className={styles.inviteInput}
+              required
+              autoFocus
+              maxLength={16}
+            />
             <div className={styles.inputGroup}>
               <span className={styles.inputPrefix}>@</span>
               <input
@@ -216,19 +242,10 @@ export default function ConnectPage() {
                 placeholder="yourhandle"
                 className={styles.handleInput}
                 required
-                autoFocus
                 maxLength={30}
               />
             </div>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
-              className={styles.emailInput}
-              required
-            />
-            <button type="submit" className={styles.btnPrimary} disabled={!email.trim() || !handle.trim()}>
+            <button type="submit" className={styles.btnPrimary} disabled={!inviteCode.trim() || !handle.trim()}>
               Continue
             </button>
           </form>
