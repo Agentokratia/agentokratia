@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { Search, Shield, Loader2 } from 'lucide-react';
 import { PublicHeader, PublicFooter } from '@/components/layout';
+import { FeedbackWidget } from '@/components/ui';
 import { formatUsdc } from '@/lib/utils/format';
 import styles from './page.module.css';
 
@@ -193,6 +194,7 @@ export default function MarketplacePage() {
       </main>
 
       <PublicFooter />
+      <FeedbackWidget placement="right" />
     </div>
   );
 }

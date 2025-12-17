@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState, useRef } from 'react';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { useAuthStore } from '@/lib/store/authStore';
+import { FeedbackWidget } from '@/components/ui';
 import styles from './layout.module.css';
 
 export default function DashboardLayout({
@@ -102,6 +103,7 @@ export default function DashboardLayout({
     <div className={styles.layout}>
       <Sidebar />
       <div className={styles.content}>{children}</div>
+      <FeedbackWidget placement="right" />
     </div>
   );
 }

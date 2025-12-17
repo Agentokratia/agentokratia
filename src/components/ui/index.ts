@@ -15,3 +15,5 @@ export { Modal, ModalTrigger } from './Modal';
 export type { ModalProps, ModalTriggerProps } from './Modal';
 
 export { Logo } from './Logo';
+
+export { FeedbackWidget } from './FeedbackWidget';
