@@ -215,14 +215,15 @@ export default function ConnectPage() {
       <div className={styles.pageCentered}>
         <div className={styles.card}>
           <Logo size={48} />
-          <h1 className={styles.cardTitle}>Complete registration</h1>
+          <h1 className={styles.cardTitle}>Early access</h1>
           <p className={styles.cardDesc}>
-            Enter your invite code and choose your handle
+            Enter your invite code to create an account
           </p>
           {errorMessage && (
             <p className={styles.cardError}>{errorMessage}</p>
           )}
           <form onSubmit={handleInviteSubmit} className={styles.inviteForm}>
+            <label className={styles.inputLabel}>Invite code</label>
             <input
               type="text"
               value={inviteCode}
@@ -233,6 +234,7 @@ export default function ConnectPage() {
               autoFocus
               maxLength={6}
             />
+            <label className={styles.inputLabel}>Choose your handle</label>
             <div className={styles.inputGroup}>
               <span className={styles.inputPrefix}>@</span>
               <input
@@ -252,8 +254,17 @@ export default function ConnectPage() {
           <p className={styles.cardHint}>
             Your profile will be at /creator/{handle || 'yourhandle'}
           </p>
-          <button className={styles.btnGhost} onClick={handleDifferentWallet}>
-            Use different wallet
+
+          <div className={styles.dividerSmall} />
+
+          <p className={styles.noCodeText}>No invite code?</p>
+          <a href="https://agentokratia.com/#waitlist" className={styles.waitlistBtn}>
+            Join the Waitlist
+            <ArrowRight size={16} />
+          </a>
+
+          <button className={styles.linkBtn} onClick={handleDifferentWallet}>
+            Disconnect wallet
           </button>
         </div>
       </div>
@@ -340,6 +351,10 @@ export default function ConnectPage() {
           <p className={styles.walletHelp}>
             <a href={EXTERNAL_LINKS.WHAT_IS_WALLET} target="_blank" rel="noopener noreferrer">
               What is a wallet?
+            </a>
+            <span className={styles.helpDivider}>·</span>
+            <a href="https://agentokratia.com/#waitlist">
+              Join the waitlist
             </a>
           </p>
         </div>
