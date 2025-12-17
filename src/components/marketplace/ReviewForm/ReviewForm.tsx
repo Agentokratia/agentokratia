@@ -1,13 +1,14 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Star, Loader2, Check, X, AlertCircle } from 'lucide-react';
 import { useAccount, useWriteContract } from 'wagmi';
+import { waitForTransactionReceipt } from '@wagmi/core';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui';
 import { REPUTATION_REGISTRY_ABI, FEEDBACK_TAGS } from '@/lib/erc8004/contracts';
 import { useNetworkConfig, getExplorerTxUrl } from '@/lib/network/client';
-import { usePendingTransactionStore } from '@/lib/store';
+import { config, type SupportedChainId } from '@/lib/web3/config';
 import styles from './ReviewForm.module.css';
 
 interface ReviewFormProps {
@@ -20,9 +21,10 @@ interface ReviewFormProps {
   onSuccess?: () => void;
 }
 
-type ReviewState = 'idle' | 'submitting_api' | 'submitting_chain' | 'success' | 'error';
+type Status = 'idle' | 'processing' | 'success' | 'error';
 
-// Tag labels derived from FEEDBACK_TAGS constant for consistency
+const STORAGE_KEY = 'pending_review';
+
 const TAG_LABELS: Record<string, string> = {
   fast: 'Fast',
   accurate: 'Accurate',
@@ -33,7 +35,6 @@ const TAG_LABELS: Record<string, string> = {
   expensive: 'Expensive',
 };
 
-// Build tags from FEEDBACK_TAGS constant to ensure consistency with backend
 const TAGS = Object.keys(FEEDBACK_TAGS)
   .filter((id) => TAG_LABELS[id])
   .map((id) => ({ id, label: TAG_LABELS[id] }));
@@ -49,28 +50,20 @@ export function ReviewForm({
 }: ReviewFormProps) {
   const { address } = useAccount();
   const { data: networkConfig } = useNetworkConfig();
-  const { writeContractAsync, isPending } = useWriteContract();
+  const { writeContractAsync } = useWriteContract();
   const queryClient = useQueryClient();
-  const { setPending, clearPending } = usePendingTransactionStore();
 
   const [rating, setRating] = useState(0);
   const [hoveredRating, setHoveredRating] = useState(0);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [state, setState] = useState<ReviewState>('idle');
+  const [status, setStatus] = useState<Status>('idle');
   const [txHash, setTxHash] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Note: We don't auto-close anymore - let user see the success state and dismiss manually
-  // This gives them time to see the confirmation and click "View on Explorer" if they want
-
-  // Check if auth is expired
   const isExpired = feedbackExpiry ? Date.now() > parseInt(feedbackExpiry) * 1000 : false;
 
   // Convert 1-5 rating to 0-100 score
-  const scoreFromRating = (r: number) => {
-    // 1 star = 0, 2 stars = 25, 3 stars = 50, 4 stars = 75, 5 stars = 100
-    return (r - 1) * 25;
-  };
+  const scoreFromRating = (r: number) => (r - 1) * 25;
 
   const toggleTag = (tagId: string) => {
     setSelectedTags((prev) =>
@@ -78,19 +71,53 @@ export function ReviewForm({
     );
   };
 
-  const handleSubmit = useCallback(async () => {
+  // Check for pending transaction on mount (recovery)
+  useEffect(() => {
+    const pending = localStorage.getItem(STORAGE_KEY);
+    if (pending) {
+      try {
+        const data = JSON.parse(pending);
+        if (data.ownerHandle === ownerHandle && data.agentSlug === agentSlug) {
+          recoverPendingTransaction(data);
+        }
+      } catch {
+        localStorage.removeItem(STORAGE_KEY);
+      }
+    }
+  }, [ownerHandle, agentSlug]);
+
+  // Recovery function for pending transactions
+  const recoverPendingTransaction = async (data: { txHash: string; reviewId: string; chainId: number }) => {
+    setStatus('processing');
+    setTxHash(data.txHash);
+
+    try {
+      // Wait for receipt
+      await waitForTransactionReceipt(config, {
+        hash: data.txHash as `0x${string}`,
+        chainId: data.chainId as SupportedChainId,
+      });
+
+      // Confirm with backend
+      await confirmReview(data.reviewId, data.txHash, data.chainId);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Recovery failed');
+      setStatus('error');
+    }
+  };
+
+  // Main submit flow - single async function
+  const handleSubmit = async () => {
     if (!rating || !address || !networkConfig?.reputationRegistryAddress) return;
 
-    setState('submitting_api');
+    setStatus('processing');
     setError(null);
-    console.log('[ReviewForm] Starting review submission...');
 
     try {
       const score = scoreFromRating(rating);
 
-      // Step 1: Submit review to API to get fileuri and filehash
-      console.log('[ReviewForm] Step 1: Creating review via POST...');
-      const apiResponse = await fetch(`/api/marketplace/${ownerHandle}/${agentSlug}/reviews`, {
+      // Step 1: Create review in backend (get fileuri and filehash)
+      const apiRes = await fetch(`/api/marketplace/${ownerHandle}/${agentSlug}/reviews`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -101,18 +128,14 @@ export function ReviewForm({
         }),
       });
 
-      if (!apiResponse.ok) {
-        const errData = await apiResponse.json();
+      if (!apiRes.ok) {
+        const errData = await apiRes.json();
         throw new Error(errData.error || 'Failed to create review');
       }
 
-      const { review, onchain } = await apiResponse.json();
-      console.log('[ReviewForm] Step 1 complete. Review ID:', review.id);
+      const { review, onchain } = await apiRes.json();
 
-      // Step 2: Submit on-chain with proper fileuri/filehash from API
-      setState('submitting_chain');
-      console.log('[ReviewForm] Step 2: Submitting on-chain transaction...');
-
+      // Step 2: Sign transaction
       const hash = await writeContractAsync({
         address: networkConfig.reputationRegistryAddress as `0x${string}`,
         abi: REPUTATION_REGISTRY_ABI,
@@ -129,60 +152,55 @@ export function ReviewForm({
       });
 
       setTxHash(hash);
-      console.log('[ReviewForm] Step 2 complete. TxHash:', hash);
 
-      // Step 3: Save txHash to database - store pattern for reliability
-      // Save to store BEFORE API call - survives browser crashes
-      console.log('[ReviewForm] Step 3: Saving txHash via PATCH...');
-      setPending({
-        type: 'review',
+      // Step 3: IMMEDIATELY save to localStorage (backup)
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        ownerHandle,
+        agentSlug,
         reviewId: review.id,
         txHash: hash,
         chainId: networkConfig.chainId,
-        ownerHandle,
-        agentSlug,
-      });
+        timestamp: Date.now(),
+      }));
 
-      try {
-        const confirmRes = await fetch(`/api/marketplace/${ownerHandle}/${agentSlug}/reviews`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ reviewId: review.id, txHash: hash, chainId: networkConfig.chainId }),
-          keepalive: true,
-        });
+      // Step 4: Wait for receipt
+      await waitForTransactionReceipt(config, { hash });
 
-        console.log('[ReviewForm] PATCH response status:', confirmRes.status);
-        if (confirmRes.ok) {
-          clearPending('review');
-          console.log('[ReviewForm] PATCH successful, cleared pending');
-        } else {
-          const errText = await confirmRes.text();
-          console.error('[ReviewForm] PATCH failed:', confirmRes.status, errText);
-        }
-        // On failure, store has pending tx - will auto-retry on page load
-      } catch (e) {
-        console.warn('[ReviewForm] Failed to save review txHash, will retry on refresh:', e);
-      }
+      // Step 5: Confirm with backend (CRITICAL)
+      await confirmReview(review.id, hash, networkConfig.chainId);
 
-      setState('success');
-      console.log('[ReviewForm] Review submission complete!');
-
-      // Invalidate queries to refresh reviews list and agent stats
-      queryClient.invalidateQueries({ queryKey: ['reviews', ownerHandle, agentSlug] });
-      queryClient.invalidateQueries({ queryKey: ['agent', ownerHandle, agentSlug] });
-
-      // Note: onSuccess is called when user clicks "Done" button, not here
-      // This lets user see the success confirmation first
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to submit review';
       if (message.includes('rejected') || message.includes('User rejected')) {
-        setState('idle');
+        setStatus('idle');
       } else {
         setError(message.includes('already') ? 'You have already reviewed this agent' : message);
-        setState('error');
+        setStatus('error');
       }
     }
-  }, [rating, address, networkConfig, tokenId, ownerHandle, agentSlug, selectedTags, feedbackAuth, writeContractAsync, queryClient, onSuccess]);
+  };
+
+  // Confirm with backend
+  const confirmReview = async (reviewId: string, hash: string, chainId: number) => {
+    const res = await fetch(`/api/marketplace/${ownerHandle}/${agentSlug}/reviews`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reviewId, txHash: hash, chainId }),
+    });
+
+    if (!res.ok) {
+      console.error('Failed to confirm review:', await res.text());
+      // Don't throw - tx succeeded, just log the error
+    }
+
+    // Success - clear localStorage and update state
+    localStorage.removeItem(STORAGE_KEY);
+    setStatus('success');
+
+    // Invalidate queries to refresh reviews list
+    queryClient.invalidateQueries({ queryKey: ['reviews', ownerHandle, agentSlug] });
+    queryClient.invalidateQueries({ queryKey: ['agent', ownerHandle, agentSlug] });
+  };
 
   // Expired auth
   if (isExpired) {
@@ -203,7 +221,7 @@ export function ReviewForm({
   }
 
   // Success state
-  if (state === 'success') {
+  if (status === 'success') {
     const handleDone = () => {
       onSuccess?.();
       onClose();
@@ -238,7 +256,7 @@ export function ReviewForm({
   }
 
   // Error state
-  if (state === 'error') {
+  if (status === 'error') {
     return (
       <div className={styles.container}>
         <div className={styles.header}>
@@ -250,7 +268,7 @@ export function ReviewForm({
         <div className={styles.errorContent}>
           <AlertCircle size={32} className={styles.errorIcon} />
           <p>{error}</p>
-          <Button onClick={() => setState('idle')} variant="outline" size="sm">
+          <Button onClick={() => setStatus('idle')} variant="outline" size="sm">
             Try Again
           </Button>
         </div>
@@ -321,18 +339,13 @@ export function ReviewForm({
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={rating === 0 || isPending || state === 'submitting_api' || state === 'submitting_chain'}
+            disabled={rating === 0 || status === 'processing'}
             size="sm"
           >
-            {state === 'submitting_api' ? (
+            {status === 'processing' ? (
               <>
                 <Loader2 size={16} className={styles.spinner} />
-                Creating review...
-              </>
-            ) : state === 'submitting_chain' || isPending ? (
-              <>
-                <Loader2 size={16} className={styles.spinner} />
-                Confirm in wallet...
+                Processing...
               </>
             ) : (
               'Submit Review'

@@ -103,7 +103,7 @@ export default function DashboardLayout({
     <div className={styles.layout}>
       <Sidebar />
       <div className={styles.content}>{children}</div>
-      <FeedbackWidget placement="right" />
+      <FeedbackWidget />
     </div>
   );
 }

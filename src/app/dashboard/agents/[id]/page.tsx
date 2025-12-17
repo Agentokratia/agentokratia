@@ -35,7 +35,6 @@ import SecurityTab from './tabs/SecurityTab';
 import ReviewsTab from './tabs/ReviewsTab';
 import { useAllNetworks, getExplorerUrlForChain } from '@/lib/network/client';
 import { formatCurrency } from '@/lib/utils/format';
-import { usePendingTransactionRetryByType } from '@/hooks';
 import styles from './page.module.css';
 
 export interface Agent {
@@ -170,17 +169,7 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
     },
   });
 
-  // Auto-retry pending transaction confirmations on page load
-  usePendingTransactionRetryByType('publish', () => {
-    setToast('Published successfully!');
-    refetchAgent();
-  });
-
-  usePendingTransactionRetryByType('enable_reviews', () => {
-    setToast('Reviews enabled!');
-    refetchAgent();
-  });
-
+  
   // Check on-chain if reviews are enabled (via isApprovedForAll)
   const { reviewsEnabled, isLoading: isCheckingReviews, refetch: refetchReviews } = useReviewsEnabled(
     address,
@@ -209,8 +198,8 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
     setShowPublishModal(true);
   };
 
-  const handlePublished = (tokenId: string, txHash: string, chainId: number) => {
-    // Update cache with the new on-chain data
+  const handlePublished = async (tokenId: string, txHash: string, chainId: number) => {
+    // Update cache optimistically with the new on-chain data
     queryClient.setQueryData(['agent', id, token], (prev: Agent | undefined) => prev ? {
       ...prev,
       status: 'live',
@@ -221,6 +210,8 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
     } : undefined);
     queryClient.invalidateQueries({ queryKey: ['agents'] });
     showToast('Agent published successfully!');
+    // Refetch to get the complete updated state from server
+    await refetchAgent();
   };
 
   const handleUnpublish = () => updateAgent({ status: 'paused' });

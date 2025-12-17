@@ -226,12 +226,12 @@ export default function ConnectPage() {
             <input
               type="text"
               value={inviteCode}
-              onChange={(e) => setInviteCode(e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, ''))}
-              placeholder="INV-XXXXXXXX"
+              onChange={(e) => setInviteCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+              placeholder="A7K9X2"
               className={styles.inviteInput}
               required
               autoFocus
-              maxLength={16}
+              maxLength={6}
             />
             <div className={styles.inputGroup}>
               <span className={styles.inputPrefix}>@</span>

@@ -25,6 +25,10 @@ export const EXTERNAL_LINKS = {
   TERMS: 'https://agentokratia.com/terms.html',
   PRIVACY: 'https://agentokratia.com/privacy.html',
   DOCS: 'https://docs.agentokratia.com',
+  MANIFESTO: 'https://agentokratia.com/#manifesto',
+  TWITTER: 'https://x.com/agentokratia',
+  DISCORD: 'https://discord.gg/agentokratia',
+  TELEGRAM: 'https://t.me/agentokratia',
 } as const;
 
 export const API_CATEGORIES = [

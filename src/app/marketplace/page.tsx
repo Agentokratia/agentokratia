@@ -194,7 +194,7 @@ export default function MarketplacePage() {
       </main>
 
       <PublicFooter />
-      <FeedbackWidget placement="right" />
+      <FeedbackWidget />
     </div>
   );
 }

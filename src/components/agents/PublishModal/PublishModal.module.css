@@ -327,3 +327,31 @@
   margin: 0;
   line-height: 1.4;
 }
+
+/* Taking Long Warning */
+.takingLong {
+  margin-top: var(--space-md);
+  padding: var(--space-md);
+  background: var(--warning-bg);
+  border-radius: var(--radius-md);
+  width: 100%;
+  text-align: left;
+}
+
+.takingLong p {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--warning);
+  margin: 0 0 var(--space-sm);
+}
+
+.takingLong ul {
+  margin: 0 0 var(--space-sm);
+  padding-left: 20px;
+  font-size: 12px;
+  color: var(--stone);
+}
+
+.takingLong li {
+  margin-bottom: 4px;
+}

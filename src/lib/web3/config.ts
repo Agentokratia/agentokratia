@@ -18,3 +18,6 @@ export const config = getDefaultConfig({
   },
   ssr: true,
 });
+
+// Export supported chain IDs type for use in components
+export type SupportedChainId = (typeof chains)[number]['id'];

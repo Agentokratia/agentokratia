@@ -1,13 +1,15 @@
 'use client';
 
-import { useState, useCallback, useEffect, useRef } from 'react';
-import { useAccount, useChainId, useSwitchChain, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import { useState, useEffect } from 'react';
+import { useAccount, useChainId, useSwitchChain, useWriteContract } from 'wagmi';
+import { waitForTransactionReceipt } from '@wagmi/core';
 import { Check, AlertCircle, Loader2, ExternalLink, MessageSquare } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal/Modal';
 import { Button } from '@/components/ui/Button/Button';
 import { useNetworkConfig, getExplorerTxUrl } from '@/lib/network/client';
-import { useAuthStore, usePendingTransactionStore } from '@/lib/store';
+import { useAuthStore } from '@/lib/store';
 import { IDENTITY_REGISTRY_ABI } from '@/lib/erc8004/contracts';
+import { config, type SupportedChainId } from '@/lib/web3/config';
 import styles from './EnableReviewsModal.module.css';
 
 interface EnableReviewsModalProps {
@@ -15,12 +17,14 @@ interface EnableReviewsModalProps {
   onOpenChange: (open: boolean) => void;
   agentId: string;
   agentName: string;
-  feedbackSignerAddress: string | null; // Can be null if not yet prepared
+  feedbackSignerAddress: string | null;
   chainId: number;
   onSuccess: () => void;
 }
 
-type Phase = 'ready' | 'preparing' | 'signing' | 'confirming' | 'finalizing' | 'success' | 'error';
+type Status = 'idle' | 'processing' | 'success' | 'error';
+
+const STORAGE_KEY = 'pending_enable_reviews';
 
 export function EnableReviewsModal({
   open,
@@ -32,102 +36,79 @@ export function EnableReviewsModal({
   onSuccess,
 }: EnableReviewsModalProps) {
   const { token } = useAuthStore();
-  const { setPending, clearPending } = usePendingTransactionStore();
   const { isConnected } = useAccount();
   const walletChainId = useChainId();
   const { switchChain } = useSwitchChain();
   const { data: networkConfig } = useNetworkConfig();
-  const { writeContractAsync, data: txHash, reset: resetWrite } = useWriteContract();
+  const { writeContractAsync } = useWriteContract();
 
-  const [phase, setPhase] = useState<Phase>('ready');
+  const [status, setStatus] = useState<Status>('idle');
   const [error, setError] = useState<string | null>(null);
+  const [txHash, setTxHash] = useState<string | null>(null);
   const [signerAddress, setSignerAddress] = useState<string | null>(initialSignerAddress);
-
-  // Track if we've already called confirm for this txHash to prevent duplicate calls
-  const confirmedTxRef = useRef<string | null>(null);
 
   const isSupportedChain = walletChainId === agentChainId;
 
-  // Wait for transaction confirmation
-  const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({
-    hash: txHash,
-  });
-
-  // Handle transaction confirmation - call confirm API
-  // Fixed: Don't rely on phase === 'confirming' as there's a race condition
-  // where tx can confirm before setPhase('confirming') is called
-  useEffect(() => {
-    if (isConfirmed && txHash && confirmedTxRef.current !== txHash) {
-      // Mark this tx as being confirmed to prevent duplicate calls
-      confirmedTxRef.current = txHash;
-      confirmWithBackend(txHash);
-    }
-  }, [isConfirmed, txHash]);
-
-  // Reset state when modal opens/closes
+  // Reset state when modal opens
   useEffect(() => {
     if (open) {
-      setPhase('ready');
+      setStatus('idle');
       setError(null);
+      setTxHash(null);
       setSignerAddress(initialSignerAddress);
-      confirmedTxRef.current = null;
-      resetWrite();
     }
-  }, [open, resetWrite, initialSignerAddress]);
+  }, [open, initialSignerAddress]);
 
-  // Confirm the transaction with backend
-  const confirmWithBackend = async (hash: string) => {
-    setPhase('finalizing');
+  // Check for pending transaction on mount (recovery)
+  useEffect(() => {
+    if (open && status === 'idle') {
+      const pending = localStorage.getItem(STORAGE_KEY);
+      if (pending) {
+        try {
+          const data = JSON.parse(pending);
+          if (data.agentId === agentId) {
+            recoverPendingTransaction(data);
+          }
+        } catch {
+          localStorage.removeItem(STORAGE_KEY);
+        }
+      }
+    }
+  }, [open, agentId]);
 
-    // Save to store BEFORE API call - survives browser crashes
-    setPending({
-      type: 'enable_reviews',
-      agentId,
-      txHash: hash,
-      chainId: agentChainId,
-    });
+  // Recovery function for pending transactions
+  const recoverPendingTransaction = async (data: { txHash: string; chainId: number }) => {
+    setStatus('processing');
+    setTxHash(data.txHash);
 
     try {
-      const res = await fetch(`/api/agents/${agentId}/reviews/confirm`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          txHash: hash,
-          chainId: agentChainId,
-        }),
-        keepalive: true,
+      // Wait for receipt
+      await waitForTransactionReceipt(config, {
+        hash: data.txHash as `0x${string}`,
+        chainId: data.chainId as SupportedChainId,
       });
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to confirm');
-
-      // Success - clear pending and update state
-      clearPending('enable_reviews');
-      setPhase('success');
-      onSuccess();
+      // Confirm with backend
+      await confirmWithBackend(data.txHash, data.chainId);
     } catch (err) {
-      // Store has the pending tx - will auto-retry on page load
-      console.error('Enable reviews confirm failed:', err);
-      setError('Sync failed. Close and refresh to retry automatically.');
-      setPhase('error');
+      setError(err instanceof Error ? err.message : 'Recovery failed');
+      setStatus('error');
     }
   };
 
-  const handleEnable = useCallback(async () => {
-    if (!networkConfig?.identityRegistryAddress) return;
+  // Main enable flow - single async function
+  const handleEnable = async () => {
+    if (!networkConfig?.identityRegistryAddress || !token) return;
 
-    setPhase('preparing');
+    setStatus('processing');
     setError(null);
 
     try {
-      // Step 1: Call prepare API to get feedbackSignerAddress
+      // Step 1: Get signer address if not provided
       let currentSignerAddress = signerAddress;
 
       if (!currentSignerAddress) {
-        const prepareRes = await fetch(`/api/agents/${agentId}/reviews`, {
+        const prepRes = await fetch(`/api/agents/${agentId}/reviews`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -135,13 +116,13 @@ export function EnableReviewsModal({
           },
         });
 
-        if (!prepareRes.ok) {
-          const data = await prepareRes.json();
+        if (!prepRes.ok) {
+          const data = await prepRes.json();
           throw new Error(data.error || 'Failed to prepare');
         }
 
-        const prepareData = await prepareRes.json();
-        currentSignerAddress = prepareData.feedbackSignerAddress;
+        const prepData = await prepRes.json();
+        currentSignerAddress = prepData.feedbackSignerAddress;
         setSignerAddress(currentSignerAddress);
       }
 
@@ -149,36 +130,66 @@ export function EnableReviewsModal({
         throw new Error('No feedback signer address');
       }
 
-      // Step 2: Sign the transaction
-      setPhase('signing');
-
-      await writeContractAsync({
+      // Step 2: Sign transaction
+      const hash = await writeContractAsync({
         address: networkConfig.identityRegistryAddress as `0x${string}`,
         abi: IDENTITY_REGISTRY_ABI,
         functionName: 'setApprovalForAll',
         args: [currentSignerAddress as `0x${string}`, true],
       });
 
-      // Step 3: Wait for confirmation (handled by useEffect above)
-      setPhase('confirming');
+      setTxHash(hash);
+
+      // Step 3: IMMEDIATELY save to localStorage (backup)
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        agentId,
+        txHash: hash,
+        chainId: agentChainId,
+        timestamp: Date.now(),
+      }));
+
+      // Step 4: Wait for receipt
+      await waitForTransactionReceipt(config, { hash });
+
+      // Step 5: Confirm with backend (CRITICAL)
+      await confirmWithBackend(hash, agentChainId);
 
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to enable reviews';
       if (message.includes('rejected') || message.includes('denied')) {
-        setPhase('ready');
+        setStatus('idle');
       } else {
         setError(message);
-        setPhase('error');
+        setStatus('error');
       }
     }
-  }, [networkConfig, signerAddress, writeContractAsync, agentId, token]);
+  };
 
-  const handleClose = () => {
-    onOpenChange(false);
+  // Confirm with backend
+  const confirmWithBackend = async (hash: string, txChainId: number) => {
+    const res = await fetch(`/api/agents/${agentId}/reviews/confirm`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        txHash: hash,
+        chainId: txChainId,
+      }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to confirm');
+
+    // Success - clear localStorage and update state
+    localStorage.removeItem(STORAGE_KEY);
+    setStatus('success');
+    onSuccess();
   };
 
   const getContent = () => {
-    if (phase === 'ready') {
+    if (status === 'idle') {
       if (!isConnected) {
         return (
           <div className={styles.content}>
@@ -226,40 +237,14 @@ export function EnableReviewsModal({
       );
     }
 
-    if (phase === 'preparing') {
+    if (status === 'processing') {
       return (
         <div className={styles.content}>
           <div className={styles.iconSpinner}>
             <Loader2 size={32} className={styles.spinner} />
           </div>
-          <h3 className={styles.title}>Preparing...</h3>
-          <p className={styles.subtitle}>Setting up reviews configuration</p>
-        </div>
-      );
-    }
-
-    if (phase === 'signing') {
-      return (
-        <div className={styles.content}>
-          <div className={styles.iconSpinner}>
-            <Loader2 size={32} className={styles.spinner} />
-          </div>
-          <h3 className={styles.title}>Sign Transaction</h3>
-          <p className={styles.subtitle}>Please confirm in your wallet</p>
-        </div>
-      );
-    }
-
-    if (phase === 'confirming' || phase === 'finalizing') {
-      return (
-        <div className={styles.content}>
-          <div className={styles.iconSpinner}>
-            <Loader2 size={32} className={styles.spinner} />
-          </div>
-          <h3 className={styles.title}>{phase === 'confirming' ? 'Confirming...' : 'Finalizing...'}</h3>
-          <p className={styles.subtitle}>
-            {phase === 'confirming' ? 'Waiting for blockchain confirmation' : 'Almost done...'}
-          </p>
+          <h3 className={styles.title}>Enabling Reviews...</h3>
+          <p className={styles.subtitle}>Please confirm in your wallet and wait for confirmation.</p>
           {txHash && networkConfig && (
             <a
               href={getExplorerTxUrl(networkConfig.blockExplorerUrl, txHash)}
@@ -274,7 +259,7 @@ export function EnableReviewsModal({
       );
     }
 
-    if (phase === 'success') {
+    if (status === 'success') {
       return (
         <div className={styles.content}>
           <div className={styles.iconSuccess}>
@@ -294,14 +279,14 @@ export function EnableReviewsModal({
               View transaction <ExternalLink size={14} />
             </a>
           )}
-          <Button onClick={handleClose} fullWidth>
+          <Button onClick={() => onOpenChange(false)} fullWidth>
             Done
           </Button>
         </div>
       );
     }
 
-    if (phase === 'error') {
+    if (status === 'error') {
       return (
         <div className={styles.content}>
           <div className={styles.iconError}>
@@ -309,7 +294,7 @@ export function EnableReviewsModal({
           </div>
           <h3 className={styles.title}>Failed</h3>
           <p className={styles.subtitle}>{error}</p>
-          <Button onClick={() => setPhase('ready')} variant="outline">
+          <Button onClick={() => setStatus('idle')} variant="outline">
             Try Again
           </Button>
         </div>

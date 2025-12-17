@@ -14,7 +14,6 @@ import { ReviewsList } from '@/components/marketplace/ReviewsList/ReviewsList';
 import { formatUsdc, formatCompactNumber } from '@/lib/utils/format';
 import { ROUTES } from '@/lib/utils/constants';
 import { useAllNetworks, getExplorerUrlForChain } from '@/lib/network/client';
-import { usePendingTransactionRetryByType } from '@/hooks';
 import styles from './page.module.css';
 
 interface ReviewStats {
@@ -83,11 +82,7 @@ export default function AgentDetailPage() {
     staleTime: 30_000,
   });
 
-  // Auto-retry pending review confirmations on page load
-  usePendingTransactionRetryByType('review', () => {
-    refetchAgent();
-  });
-
+  
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isPlaygroundOpen) setIsPlaygroundOpen(false);

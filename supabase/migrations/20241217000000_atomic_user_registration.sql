@@ -56,7 +56,7 @@ BEGIN
   WHERE id = v_invite.id;
 
   -- Return success
-  RETURN QUERY SELECT v_new_user.id, v_new_user.email, NULL::TEXT, NULL::TEXT;
+  RETURN QUERY SELECT v_new_user.id, v_new_user.email::TEXT, NULL::TEXT, NULL::TEXT;
 END;
 $$;
 
