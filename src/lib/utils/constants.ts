@@ -29,6 +29,7 @@ export const EXTERNAL_LINKS = {
   TWITTER: 'https://x.com/agentokratia',
   DISCORD: 'https://discord.gg/agentokratia',
   TELEGRAM: 'https://t.me/agentokratia',
+  GITHUB: 'https://github.com/Agentokratia/agentokratia',
 } as const;
 
 export const API_CATEGORIES = [

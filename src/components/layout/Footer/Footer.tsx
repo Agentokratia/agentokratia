@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ROUTES } from '@/lib/utils/constants';
+import { ROUTES, EXTERNAL_LINKS } from '@/lib/utils/constants';
 import styles from './Footer.module.css';
 
 const footerLinks = [
@@ -26,6 +26,12 @@ const footerLinks = [
       { href: '#', label: 'Terms' },
     ],
   },
+  {
+    title: 'Open Source',
+    links: [
+      { href: EXTERNAL_LINKS.GITHUB, label: 'GitHub', external: true },
+    ],
+  },
 ];
 
 export function Footer() {
@@ -46,9 +52,15 @@ export function Footer() {
               <ul className={styles.sectionLinks}>
                 {section.links.map((link) => (
                   <li key={link.label}>
-                    <Link href={link.href} className={styles.link}>
-                      {link.label}
-                    </Link>
+                    {'external' in link && link.external ? (
+                      <a href={link.href} className={styles.link} target="_blank" rel="noopener noreferrer">
+                        {link.label}
+                      </a>
+                    ) : (
+                      <Link href={link.href} className={styles.link}>
+                        {link.label}
+                      </Link>
+                    )}
                   </li>
                 ))}
               </ul>
