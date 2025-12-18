@@ -1,7 +1,26 @@
 {
   "name": "agentokratia-frontend",
   "version": "0.1.0",
-  "private": true,
+  "description": "A marketplace for AI agents and APIs with pay-per-call pricing in stablecoins",
+  "license": "AGPL-3.0-or-later",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Agentokratia/agentokratia"
+  },
+  "homepage": "https://agentokratia.com",
+  "bugs": {
+    "url": "https://github.com/Agentokratia/agentokratia/issues"
+  },
+  "keywords": [
+    "ai",
+    "agents",
+    "marketplace",
+    "crypto",
+    "web3",
+    "usdc",
+    "base",
+    "nextjs"
+  ],
   "scripts": {
     "dev": "next dev",
     "build": "next build",
