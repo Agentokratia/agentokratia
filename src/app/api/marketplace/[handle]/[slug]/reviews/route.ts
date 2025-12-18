@@ -113,17 +113,23 @@ export async function GET(
     }
 
     // Fetch user handles for reviewer addresses
-    const reviewerAddresses = [...new Set((reviewsData || []).map((r: DbAgentReview) => r.reviewer_address))];
-    const { data: usersData } = reviewerAddresses.length > 0
-      ? await supabaseAdmin
-          .from('users')
-          .select('wallet_address, handle')
-          .in('wallet_address', reviewerAddresses)
-      : { data: [] };
+    const reviewerAddresses = [
+      ...new Set((reviewsData || []).map((r: DbAgentReview) => r.reviewer_address)),
+    ];
+    const { data: usersData } =
+      reviewerAddresses.length > 0
+        ? await supabaseAdmin
+            .from('users')
+            .select('wallet_address, handle')
+            .in('wallet_address', reviewerAddresses)
+        : { data: [] };
 
-    const handleMap = new Map((usersData || []).map((u: { wallet_address: string; handle: string | null }) =>
-      [u.wallet_address.toLowerCase(), u.handle]
-    ));
+    const handleMap = new Map(
+      (usersData || []).map((u: { wallet_address: string; handle: string | null }) => [
+        u.wallet_address.toLowerCase(),
+        u.handle,
+      ])
+    );
 
     // Fetch stats from view
     const { data: statsData } = await supabaseAdmin
@@ -191,7 +197,6 @@ export async function POST(
     const { handle, slug } = await params;
     const body = await request.json();
 
-
     // Resolve handle/slug to agentId
     const resolved = await resolveAgentByHandleSlug(handle, slug);
     if (!resolved) {
@@ -206,21 +211,36 @@ export async function POST(
     }
 
     if (typeof score !== 'number' || score < 0 || score > 100) {
-      return NextResponse.json({ error: 'score must be a number between 0 and 100' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'score must be a number between 0 and 100' },
+        { status: 400 }
+      );
     }
 
     if (tag1 && !VALID_TAGS.includes(tag1)) {
-      return NextResponse.json({ error: `Invalid tag1. Must be one of: ${VALID_TAGS.join(', ')}` }, { status: 400 });
+      return NextResponse.json(
+        { error: `Invalid tag1. Must be one of: ${VALID_TAGS.join(', ')}` },
+        { status: 400 }
+      );
     }
     if (tag2 && !VALID_TAGS.includes(tag2)) {
-      return NextResponse.json({ error: `Invalid tag2. Must be one of: ${VALID_TAGS.join(', ')}` }, { status: 400 });
+      return NextResponse.json(
+        { error: `Invalid tag2. Must be one of: ${VALID_TAGS.join(', ')}` },
+        { status: 400 }
+      );
     }
 
     if (title && (typeof title !== 'string' || title.length > 200)) {
-      return NextResponse.json({ error: 'title must be a string with max 200 characters' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'title must be a string with max 200 characters' },
+        { status: 400 }
+      );
     }
     if (content && (typeof content !== 'string' || content.length > 2000)) {
-      return NextResponse.json({ error: 'content must be a string with max 2000 characters' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'content must be a string with max 2000 characters' },
+        { status: 400 }
+      );
     }
 
     // Verify agent exists and is live
@@ -273,7 +293,10 @@ export async function POST(
       .single();
 
     if (existingReview) {
-      return NextResponse.json({ error: 'Review already submitted for this payment' }, { status: 409 });
+      return NextResponse.json(
+        { error: 'Review already submitted for this payment' },
+        { status: 409 }
+      );
     }
 
     const reviewContent = {
@@ -341,8 +364,14 @@ export async function POST(
       onchain: {
         agentId: agent.erc8004_token_id,
         score: review.score,
-        tag1: tag1 && VALID_TAGS.includes(tag1) ? FEEDBACK_TAGS[tag1 as keyof typeof FEEDBACK_TAGS] : EMPTY_BYTES32,
-        tag2: tag2 && VALID_TAGS.includes(tag2) ? FEEDBACK_TAGS[tag2 as keyof typeof FEEDBACK_TAGS] : EMPTY_BYTES32,
+        tag1:
+          tag1 && VALID_TAGS.includes(tag1)
+            ? FEEDBACK_TAGS[tag1 as keyof typeof FEEDBACK_TAGS]
+            : EMPTY_BYTES32,
+        tag2:
+          tag2 && VALID_TAGS.includes(tag2)
+            ? FEEDBACK_TAGS[tag2 as keyof typeof FEEDBACK_TAGS]
+            : EMPTY_BYTES32,
         fileuri,
         filehash: contentHash,
         feedbackAuth,

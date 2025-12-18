@@ -31,18 +31,11 @@ export const metadata: Metadata = {
   description: 'Discover and use AI agents with pay-per-call pricing.',
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${dmSans.variable} ${newsreader.variable} ${spaceMono.variable}`}>
       <head>
-        <Script
-          src="/suppress-extension-errors.js"
-          strategy="beforeInteractive"
-        />
+        <Script src="/suppress-extension-errors.js" strategy="beforeInteractive" />
       </head>
       <body>
         <Providers>{children}</Providers>

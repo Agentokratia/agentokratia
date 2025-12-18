@@ -36,12 +36,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ payments: [] });
     }
 
-    const agentIds = userAgents.map(a => a.id);
+    const agentIds = userAgents.map((a) => a.id);
 
     // Get payment history for user's agents
     const { data: payments, error: paymentsError } = await supabaseAdmin
       .from('agent_payments')
-      .select(`
+      .select(
+        `
         id,
         agent_id,
         caller_address,
@@ -52,7 +53,8 @@ export async function GET(request: NextRequest) {
         request_id,
         created_at,
         agents!inner(name)
-      `)
+      `
+      )
       .in('agent_id', agentIds)
       .order('created_at', { ascending: false })
       .limit(limit);
@@ -63,12 +65,10 @@ export async function GET(request: NextRequest) {
     }
 
     // Transform for client
-    const transformedPayments = (payments || []).map(p => {
+    const transformedPayments = (payments || []).map((p) => {
       // Handle joined agent - could be object or array depending on Supabase response
       const agentData = p.agents as { name: string } | { name: string }[] | null;
-      const agentName = Array.isArray(agentData)
-        ? agentData[0]?.name
-        : agentData?.name;
+      const agentName = Array.isArray(agentData) ? agentData[0]?.name : agentData?.name;
 
       return {
         id: p.id,
@@ -87,9 +87,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ payments: transformedPayments });
   } catch (error) {
     console.error('[Payments API] Error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

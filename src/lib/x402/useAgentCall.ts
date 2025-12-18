@@ -2,10 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { useAccount } from 'wagmi';
-import {
-  callAgentWithPayment,
-  type X402Response
-} from './client';
+import { callAgentWithPayment, type X402Response } from './client';
 import { usePaymentSigner } from './usePaymentSigner';
 import { usdcUnitsToDollars } from '@/lib/utils/format';
 import type { PaymentRequired } from '@x402/core/types';
@@ -53,51 +50,54 @@ export function useAgentCall<T = unknown>(): UseAgentCallResult<T> {
     setPaymentInfo(null);
   }, []);
 
-  const call = useCallback(async (handle: string, slug: string, body: unknown): Promise<X402Response<T>> => {
-    reset();
-    setState('loading');
-    setError(null);
+  const call = useCallback(
+    async (handle: string, slug: string, body: unknown): Promise<X402Response<T>> => {
+      reset();
+      setState('loading');
+      setError(null);
 
-    try {
-      // Create payment signer function
-      const createPaymentPayload = async (paymentRequired: PaymentRequired) => {
-        // Extract payment info from the 402 response
-        const firstAccept = paymentRequired.accepts[0];
-        if (firstAccept) {
-          setPaymentInfo({
-            agentName: paymentRequired.resource.description || 'Agent',
-            priceUsdc: usdcUnitsToDollars(firstAccept.amount),
-            network: firstAccept.network,
-          });
+      try {
+        // Create payment signer function
+        const createPaymentPayload = async (paymentRequired: PaymentRequired) => {
+          // Extract payment info from the 402 response
+          const firstAccept = paymentRequired.accepts[0];
+          if (firstAccept) {
+            setPaymentInfo({
+              agentName: paymentRequired.resource.description || 'Agent',
+              priceUsdc: usdcUnitsToDollars(firstAccept.amount),
+              network: firstAccept.network,
+            });
+          }
+          setState('signing');
+          return signPayment(paymentRequired);
+        };
+
+        const result = await callAgentWithPayment<T>(handle, slug, body, createPaymentPayload);
+
+        setResponse(result);
+
+        if (result.success) {
+          setState('success');
+        } else {
+          setState('error');
+          setError(result.error || 'Call failed');
         }
-        setState('signing');
-        return signPayment(paymentRequired);
-      };
 
-      const result = await callAgentWithPayment<T>(handle, slug, body, createPaymentPayload);
-
-      setResponse(result);
-
-      if (result.success) {
-        setState('success');
-      } else {
+        return result;
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Unknown error';
         setState('error');
-        setError(result.error || 'Call failed');
+        setError(errorMessage);
+        const result: X402Response<T> = {
+          success: false,
+          error: errorMessage,
+        };
+        setResponse(result);
+        return result;
       }
-
-      return result;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-      setState('error');
-      setError(errorMessage);
-      const result: X402Response<T> = {
-        success: false,
-        error: errorMessage,
-      };
-      setResponse(result);
-      return result;
-    }
-  }, [reset, signPayment]);
+    },
+    [reset, signPayment]
+  );
 
   return {
     state,

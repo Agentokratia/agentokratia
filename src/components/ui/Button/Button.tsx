@@ -2,8 +2,7 @@ import { forwardRef } from 'react';
 import { cn } from '@/lib/utils/cn';
 import styles from './Button.module.css';
 
-export interface ButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'outline' | 'success';
   size?: 'sm' | 'md' | 'lg';
   loading?: boolean;
@@ -39,9 +38,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         {...props}
       >
         {loading && <span className={styles.spinner} />}
-        <span className={loading ? styles.hiddenText : undefined}>
-          {children}
-        </span>
+        <span className={loading ? styles.hiddenText : undefined}>{children}</span>
       </button>
     );
   }

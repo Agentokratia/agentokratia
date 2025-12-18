@@ -27,10 +27,7 @@ class ApiClient {
     this.authToken = token;
   }
 
-  private async request<T>(
-    endpoint: string,
-    options: RequestOptions = {}
-  ): Promise<T> {
+  private async request<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
     const { params, body, headers: customHeaders, ...fetchOptions } = options;
 
     let url = `${this.baseUrl}${endpoint}`;

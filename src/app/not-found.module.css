@@ -68,7 +68,9 @@
   cursor: pointer;
   padding: 8px 12px;
   border-radius: var(--radius-sm);
-  transition: color 0.15s, background 0.15s;
+  transition:
+    color 0.15s,
+    background 0.15s;
 }
 
 .backLink:hover {

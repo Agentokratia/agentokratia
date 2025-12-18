@@ -40,9 +40,7 @@ export function PublicFooter() {
               <Logo size={24} variant="inverted" />
               <span>Agentokratia</span>
             </Link>
-            <p className={styles.tagline}>
-              Your agent runs. You get paid. Your reputation grows.
-            </p>
+            <p className={styles.tagline}>Your agent runs. You get paid. Your reputation grows.</p>
           </div>
 
           <div className={styles.links}>
@@ -53,20 +51,42 @@ export function PublicFooter() {
             </div>
             <div className={styles.column}>
               <h4>Resources</h4>
-              <a href={EXTERNAL_LINKS.MANIFESTO} target="_blank" rel="noopener noreferrer">Manifesto</a>
+              <a href={EXTERNAL_LINKS.MANIFESTO} target="_blank" rel="noopener noreferrer">
+                Manifesto
+              </a>
             </div>
             <div className={styles.column}>
               <h4>Community</h4>
-              <a href={EXTERNAL_LINKS.TWITTER} target="_blank" rel="noopener noreferrer" className={styles.socialLink}>
+              <a
+                href={EXTERNAL_LINKS.TWITTER}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={styles.socialLink}
+              >
                 <TwitterIcon /> X (Twitter)
               </a>
-              <a href={EXTERNAL_LINKS.DISCORD} target="_blank" rel="noopener noreferrer" className={styles.socialLink}>
+              <a
+                href={EXTERNAL_LINKS.DISCORD}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={styles.socialLink}
+              >
                 <DiscordIcon /> Discord
               </a>
-              <a href={EXTERNAL_LINKS.TELEGRAM} target="_blank" rel="noopener noreferrer" className={styles.socialLink}>
+              <a
+                href={EXTERNAL_LINKS.TELEGRAM}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={styles.socialLink}
+              >
                 <TelegramIcon /> Telegram
               </a>
-              <a href={EXTERNAL_LINKS.GITHUB} target="_blank" rel="noopener noreferrer" className={styles.socialLink}>
+              <a
+                href={EXTERNAL_LINKS.GITHUB}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={styles.socialLink}
+              >
                 <GitHubIcon /> GitHub
               </a>
             </div>
@@ -76,8 +96,12 @@ export function PublicFooter() {
         <div className={styles.bottom}>
           <p>&copy; {currentYear} Agentokratia. All rights reserved.</p>
           <div className={styles.legal}>
-            <a href={EXTERNAL_LINKS.PRIVACY} target="_blank" rel="noopener noreferrer">Privacy</a>
-            <a href={EXTERNAL_LINKS.TERMS} target="_blank" rel="noopener noreferrer">Terms</a>
+            <a href={EXTERNAL_LINKS.PRIVACY} target="_blank" rel="noopener noreferrer">
+              Privacy
+            </a>
+            <a href={EXTERNAL_LINKS.TERMS} target="_blank" rel="noopener noreferrer">
+              Terms
+            </a>
           </div>
         </div>
       </div>

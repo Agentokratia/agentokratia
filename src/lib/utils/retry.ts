@@ -18,7 +18,7 @@ export async function withRetry<T>(
       if (attempt < maxRetries - 1) {
         // Exponential backoff: 2s, 4s, 8s, 16s, 32s
         const delay = baseDelay * Math.pow(2, attempt);
-        await new Promise(resolve => setTimeout(resolve, delay));
+        await new Promise((resolve) => setTimeout(resolve, delay));
       }
     }
   }

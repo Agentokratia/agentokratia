@@ -63,7 +63,10 @@ export default function SettingsPage() {
       } catch (err) {
         console.error('Failed to fetch profile:', err);
         // Token might be invalid
-        if (err instanceof Error && (err.message.includes('401') || err.message.includes('expired'))) {
+        if (
+          err instanceof Error &&
+          (err.message.includes('401') || err.message.includes('expired'))
+        ) {
           clearAuth();
           router.push('/');
         }
@@ -165,9 +168,7 @@ export default function SettingsPage() {
                 </span>
                 <div className={styles.networkRow}>
                   <span className={styles.networkName}>{networkConfig.name}</span>
-                  {networkConfig.isTestnet && (
-                    <span className={styles.testnetBadge}>Testnet</span>
-                  )}
+                  {networkConfig.isTestnet && <span className={styles.testnetBadge}>Testnet</span>}
                 </div>
               </div>
             )}
@@ -259,17 +260,9 @@ export default function SettingsPage() {
         </Card>
       </div>
 
-      {error && (
-        <div className={styles.errorMessage}>
-          {error}
-        </div>
-      )}
+      {error && <div className={styles.errorMessage}>{error}</div>}
 
-      {success && (
-        <div className={styles.successMessage}>
-          Settings saved successfully!
-        </div>
-      )}
+      {success && <div className={styles.successMessage}>Settings saved successfully!</div>}
 
       <div className={styles.actions}>
         <Button onClick={handleSave} loading={saving}>

@@ -65,10 +65,7 @@ export async function GET(
       .single();
 
     if (userError || !user) {
-      return NextResponse.json(
-        { error: 'Creator not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Creator not found' }, { status: 404 });
     }
 
     // Fetch agent by owner_id and slug
@@ -81,10 +78,7 @@ export async function GET(
       .single();
 
     if (error || !data) {
-      return NextResponse.json(
-        { error: 'Agent not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
     }
 
     const agent = data as DbAgent;
@@ -128,11 +122,13 @@ export async function GET(
       // Reviews enabled (feedbackSigner is set up and operator approved)
       reviewsEnabled: !!(agent.feedback_signer_address && agent.feedback_operator_set_at),
       // Performance stats
-      stats: statsData ? {
-        uptime: statsData.uptime_pct,
-        avgResponseMs: statsData.avg_response_ms,
-        errorRate: statsData.error_rate_pct,
-      } : undefined,
+      stats: statsData
+        ? {
+            uptime: statsData.uptime_pct,
+            avgResponseMs: statsData.avg_response_ms,
+            errorRate: statsData.error_rate_pct,
+          }
+        : undefined,
       // Review stats
       reviewStats: reviewStatsData
         ? {
@@ -153,9 +149,6 @@ export async function GET(
     return NextResponse.json({ agent: result });
   } catch (error) {
     console.error('Marketplace detail error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

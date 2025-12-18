@@ -8,11 +8,7 @@ import { useAuthStore } from '@/lib/store/authStore';
 import { FeedbackWidget } from '@/components/ui';
 import styles from './layout.module.css';
 
-export default function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { address, isConnected, status } = useAccount();
   const router = useRouter();
   const { token, walletAddress, clearAuth } = useAuthStore();
@@ -21,7 +17,8 @@ export default function DashboardLayout({
   const lastStatus = useRef(status);
 
   // Check if authenticated (has token and wallet matches)
-  const isAuthenticated = token && walletAddress && walletAddress.toLowerCase() === address?.toLowerCase();
+  const isAuthenticated =
+    token && walletAddress && walletAddress.toLowerCase() === address?.toLowerCase();
 
   // Track status for the timeout check
   useEffect(() => {

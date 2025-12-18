@@ -9,10 +9,7 @@ import { withRetry } from '@/lib/utils/retry';
 
 // POST /api/agents/[id]/reviews/confirm
 // Confirms the setApprovalForAll transaction for enabling reviews
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id: agentId } = await params;
 
   const auth = await getAuthenticatedUser(request);
@@ -35,16 +32,15 @@ export async function POST(
   try {
     networkConfig = await getNetworkConfig(chainId);
   } catch {
-    return NextResponse.json(
-      { error: 'Unsupported chain' },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: 'Unsupported chain' }, { status: 400 });
   }
 
   // Get agent with ownership check
   const { data: agent, error: agentError } = await supabaseAdmin
     .from('agents')
-    .select('id, owner_id, erc8004_token_id, erc8004_chain_id, feedback_signer_address, feedback_operator_tx_hash')
+    .select(
+      'id, owner_id, erc8004_token_id, erc8004_chain_id, feedback_signer_address, feedback_operator_tx_hash'
+    )
     .eq('id', agentId)
     .single();
 
@@ -58,10 +54,7 @@ export async function POST(
 
   // Agent must be published
   if (!agent.erc8004_token_id) {
-    return NextResponse.json(
-      { error: 'Agent not published' },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: 'Agent not published' }, { status: 400 });
   }
 
   // Must have feedback signer address
@@ -98,19 +91,20 @@ export async function POST(
     });
 
     // Wait for transaction confirmation with retry
-    const receipt = await withRetry(async () => {
-      return await publicClient.waitForTransactionReceipt({
-        hash: txHash as `0x${string}`,
-        timeout: 30_000,
-        confirmations: 1,
-      });
-    }, 5, 3000);
+    const receipt = await withRetry(
+      async () => {
+        return await publicClient.waitForTransactionReceipt({
+          hash: txHash as `0x${string}`,
+          timeout: 30_000,
+          confirmations: 1,
+        });
+      },
+      5,
+      3000
+    );
 
     if (receipt.status !== 'success') {
-      return NextResponse.json(
-        { error: 'Transaction failed on-chain' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Transaction failed on-chain' }, { status: 400 });
     }
 
     // SECURITY: Verify transaction was sent by the authenticated user

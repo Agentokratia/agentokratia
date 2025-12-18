@@ -40,17 +40,19 @@ export const highlightJson = (json: string): string => {
     const escaped = escapeHtml(normalized);
 
     // Apply syntax highlighting with CSS classes
-    return escaped
-      // Highlight keys (property names)
-      .replace(/"([^"]+)":/g, '<span class="key">"$1"</span>:')
-      // Highlight string values
-      .replace(/: "([^"]*)"/g, ': <span class="string">"$1"</span>')
-      // Highlight numbers
-      .replace(/: (-?\d+\.?\d*)/g, ': <span class="number">$1</span>')
-      // Highlight booleans
-      .replace(/: (true|false)/g, ': <span class="bool">$1</span>')
-      // Highlight null
-      .replace(/: (null)/g, ': <span class="null">$1</span>');
+    return (
+      escaped
+        // Highlight keys (property names)
+        .replace(/"([^"]+)":/g, '<span class="key">"$1"</span>:')
+        // Highlight string values
+        .replace(/: "([^"]*)"/g, ': <span class="string">"$1"</span>')
+        // Highlight numbers
+        .replace(/: (-?\d+\.?\d*)/g, ': <span class="number">$1</span>')
+        // Highlight booleans
+        .replace(/: (true|false)/g, ': <span class="bool">$1</span>')
+        // Highlight null
+        .replace(/: (null)/g, ': <span class="null">$1</span>')
+    );
   } catch {
     // If JSON is invalid, return escaped version without highlighting
     // This prevents any potential XSS through malformed input

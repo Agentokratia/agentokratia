@@ -75,7 +75,7 @@ export async function callAgentWithPayment<T = unknown>(
   if (!paymentRequiredHeader) {
     return {
       success: false,
-      error: 'Payment required but no payment details provided'
+      error: 'Payment required but no payment details provided',
     };
   }
   const paymentRequired = decodePaymentRequiredHeader(paymentRequiredHeader);

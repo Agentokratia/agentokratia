@@ -65,10 +65,7 @@ export async function isOnChainOwner(
 /**
  * Get the current on-chain owner of a token
  */
-export async function getOnChainOwner(
-  tokenId: string,
-  chainId: number
-): Promise<string | null> {
+export async function getOnChainOwner(tokenId: string, chainId: number): Promise<string | null> {
   try {
     const network = await getNetworkConfig(chainId);
     if (!network.identityRegistryAddress) {
@@ -95,10 +92,7 @@ export async function getOnChainOwner(
  * Get all token IDs owned by an address by scanning Transfer events
  * Use this for the "Claimable Agents" section in dashboard
  */
-export async function getOwnedTokenIds(
-  address: string,
-  chainId: number
-): Promise<string[]> {
+export async function getOwnedTokenIds(address: string, chainId: number): Promise<string[]> {
   try {
     const network = await getNetworkConfig(chainId);
     if (!network.identityRegistryAddress) {
@@ -167,7 +161,7 @@ export async function batchVerifyOwnership(
     const client = getClient(chainId, network.rpcUrl);
 
     const results = await client.multicall({
-      contracts: tokenIds.map(tokenId => ({
+      contracts: tokenIds.map((tokenId) => ({
         address: network.identityRegistryAddress as `0x${string}`,
         abi: IDENTITY_REGISTRY_ABI,
         functionName: 'ownerOf',

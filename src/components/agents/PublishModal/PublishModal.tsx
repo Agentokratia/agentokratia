@@ -3,7 +3,17 @@
 import { useState, useEffect } from 'react';
 import { useAccount, useChainId, useSwitchChain, useWriteContract } from 'wagmi';
 import { waitForTransactionReceipt } from '@wagmi/core';
-import { Check, AlertCircle, Loader2, ExternalLink, Rocket, Wallet, Twitter, Link2, MessageSquare } from 'lucide-react';
+import {
+  Check,
+  AlertCircle,
+  Loader2,
+  ExternalLink,
+  Rocket,
+  Wallet,
+  Twitter,
+  Link2,
+  MessageSquare,
+} from 'lucide-react';
 import { Modal } from '@/components/ui/Modal/Modal';
 import { Button } from '@/components/ui/Button/Button';
 import { parseTokenIdFromLogs, useEstimateRegistrationFee } from '@/lib/erc8004/hooks';
@@ -46,7 +56,14 @@ interface Blocker {
   onClick?: () => void;
 }
 
-export function PublishModal({ open, onOpenChange, agent, hasSigningKey, onPublished, onEnableReviews }: PublishModalProps) {
+export function PublishModal({
+  open,
+  onOpenChange,
+  agent,
+  hasSigningKey,
+  onPublished,
+  onEnableReviews,
+}: PublishModalProps) {
   const { token } = useAuthStore();
   const { isConnected } = useAccount();
   const chainId = useChainId();
@@ -79,14 +96,14 @@ export function PublishModal({ open, onOpenChange, agent, hasSigningKey, onPubli
       id: 'wallet',
       message: 'Connect your wallet',
       action: 'Connect',
-      onClick: () => onOpenChange(false)
+      onClick: () => onOpenChange(false),
     });
   } else if (!isSupportedChain && networkConfig) {
     blockers.push({
       id: 'chain',
       message: `Switch to ${networkConfig.name}`,
       action: 'Switch',
-      onClick: () => switchChain({ chainId: networkConfig.chainId })
+      onClick: () => switchChain({ chainId: networkConfig.chainId }),
     });
   }
 
@@ -170,12 +187,15 @@ export function PublishModal({ open, onOpenChange, agent, hasSigningKey, onPubli
       setTxHash(hash);
 
       // Step 3: IMMEDIATELY save to localStorage (backup - survives browser crash)
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({
-        agentId: agent.id,
-        txHash: hash,
-        chainId,
-        timestamp: Date.now(),
-      }));
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({
+          agentId: agent.id,
+          txHash: hash,
+          chainId,
+          timestamp: Date.now(),
+        })
+      );
 
       // Step 4: Wait for receipt
       const receipt = await waitForTransactionReceipt(config, { hash });
@@ -186,7 +206,6 @@ export function PublishModal({ open, onOpenChange, agent, hasSigningKey, onPubli
 
       // Step 6: Confirm with backend (CRITICAL - links on-chain to off-chain)
       await confirmPublish(hash, parsedTokenId.toString(), chainId);
-
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Something went wrong';
       setError(message.includes('rejected') ? 'Transaction cancelled' : message);
@@ -254,7 +273,8 @@ export function PublishModal({ open, onOpenChange, agent, hasSigningKey, onPubli
           </div>
           <h3 className={styles.title}>Ready to publish</h3>
           <p className={styles.subtitle}>
-            This will register <strong>{agent.name}</strong> on {networkConfig?.name || 'Base'} and make it live on the marketplace.
+            This will register <strong>{agent.name}</strong> on {networkConfig?.name || 'Base'} and
+            make it live on the marketplace.
           </p>
           <div className={styles.summary}>
             <div className={styles.summaryItem}>
@@ -289,7 +309,9 @@ export function PublishModal({ open, onOpenChange, agent, hasSigningKey, onPubli
             <Loader2 size={32} className={styles.spinner} />
           </div>
           <h3 className={styles.title}>Publishing...</h3>
-          <p className={styles.subtitle}>Please confirm in your wallet and wait for confirmation.</p>
+          <p className={styles.subtitle}>
+            Please confirm in your wallet and wait for confirmation.
+          </p>
           {txHash && networkConfig && (
             <a
               href={getExplorerTxUrl(networkConfig.blockExplorerUrl, txHash)}
@@ -307,9 +329,10 @@ export function PublishModal({ open, onOpenChange, agent, hasSigningKey, onPubli
 
     // Success state
     if (status === 'success') {
-      const shareUrl = typeof window !== 'undefined' && agent.ownerHandle && agent.slug
-        ? `${window.location.origin}/${agent.ownerHandle}/${agent.slug}`
-        : '';
+      const shareUrl =
+        typeof window !== 'undefined' && agent.ownerHandle && agent.slug
+          ? `${window.location.origin}/${agent.ownerHandle}/${agent.slug}`
+          : '';
       const shareText = `I just published "${agent.name}" on Agentokratia! Check it out:`;
 
       const handleCopyLink = () => navigator.clipboard.writeText(shareUrl);
@@ -325,14 +348,8 @@ export function PublishModal({ open, onOpenChange, agent, hasSigningKey, onPubli
             <Check size={32} />
           </div>
           <h3 className={styles.title}>Published!</h3>
-          <p className={styles.subtitle}>
-            Your agent is now live with verified on-chain identity.
-          </p>
-          {tokenId && (
-            <div className={styles.tokenBadge}>
-              Token #{tokenId}
-            </div>
-          )}
+          <p className={styles.subtitle}>Your agent is now live with verified on-chain identity.</p>
+          {tokenId && <div className={styles.tokenBadge}>Token #{tokenId}</div>}
           {txHash && networkConfig && (
             <a
               href={getExplorerTxUrl(networkConfig.blockExplorerUrl, txHash)}
@@ -392,7 +409,9 @@ export function PublishModal({ open, onOpenChange, agent, hasSigningKey, onPubli
           <div className={styles.errorIcon}>
             <AlertCircle size={32} />
           </div>
-          <h3 className={styles.title}>{error === 'Transaction cancelled' ? 'Cancelled' : 'Failed'}</h3>
+          <h3 className={styles.title}>
+            {error === 'Transaction cancelled' ? 'Cancelled' : 'Failed'}
+          </h3>
           <p className={styles.subtitle}>{error}</p>
           <div className={styles.actions}>
             <Button variant="outline" onClick={() => setStatus('idle')}>
@@ -407,12 +426,7 @@ export function PublishModal({ open, onOpenChange, agent, hasSigningKey, onPubli
   };
 
   return (
-    <Modal
-      open={open}
-      onOpenChange={onOpenChange}
-      title="Publish Agent"
-      size="sm"
-    >
+    <Modal open={open} onOpenChange={onOpenChange} title="Publish Agent" size="sm">
       {getContent()}
     </Modal>
   );

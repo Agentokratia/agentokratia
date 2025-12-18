@@ -44,9 +44,12 @@ const eip3009ABI = [
 function getChainFromNetwork(network: string) {
   const chainId = parseInt(network.split(':')[1]);
   switch (chainId) {
-    case 84532: return baseSepolia;
-    case 8453: return base;
-    default: return baseSepolia;
+    case 84532:
+      return baseSepolia;
+    case 8453:
+      return base;
+    default:
+      return baseSepolia;
   }
 }
 
@@ -67,7 +70,12 @@ interface ExactEvmPayload {
 export interface SimulateResponse {
   success: boolean;
   error?: string;
-  errorReason?: 'self_payment' | 'insufficient_balance' | 'invalid_nonce' | 'invalid_signature' | 'simulation_failed';
+  errorReason?:
+    | 'self_payment'
+    | 'insufficient_balance'
+    | 'invalid_nonce'
+    | 'invalid_signature'
+    | 'simulation_failed';
 }
 
 // Create facilitator config with CDP credentials
@@ -90,7 +98,11 @@ export async function simulatePayment(
     const exactEvmPayload = paymentPayload.payload as unknown as ExactEvmPayload;
 
     if (!exactEvmPayload.authorization || !exactEvmPayload.signature) {
-      return { success: false, error: 'Invalid payload structure', errorReason: 'simulation_failed' };
+      return {
+        success: false,
+        error: 'Invalid payload structure',
+        errorReason: 'simulation_failed',
+      };
     }
 
     const { authorization, signature } = exactEvmPayload;
@@ -116,9 +128,7 @@ export async function simulatePayment(
 
     // Convert yParity (0/1) to v (27/28) if needed - USDC expects 27 or 28
     // Modern wallets return yParity (0 or 1), legacy wallets return v (27 or 28)
-    const v = parsedSig.v !== undefined
-      ? Number(parsedSig.v)
-      : Number(parsedSig.yParity) + 27;
+    const v = parsedSig.v !== undefined ? Number(parsedSig.v) : Number(parsedSig.yParity) + 27;
 
     // Encode the transferWithAuthorization call - same as x402's settle
     const callData = encodeFunctionData({
@@ -202,8 +212,4 @@ export async function settlePayment(
 }
 
 // Re-export header utilities
-export {
-  decodePaymentSignatureHeader,
-  encodePaymentRequiredHeader,
-  encodePaymentResponseHeader,
-};
+export { decodePaymentSignatureHeader, encodePaymentRequiredHeader, encodePaymentResponseHeader };

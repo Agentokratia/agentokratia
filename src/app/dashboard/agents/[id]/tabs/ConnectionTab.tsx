@@ -1,7 +1,15 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, Trash2, GripVertical, AlertCircle, CheckCircle, Download, Upload } from 'lucide-react';
+import {
+  Plus,
+  Trash2,
+  GripVertical,
+  AlertCircle,
+  CheckCircle,
+  Download,
+  Upload,
+} from 'lucide-react';
 import { Button, Input, Select } from '@/components/ui';
 import { PLACEHOLDER_ENDPOINT } from '@/lib/utils/constants';
 import { TestPlayground } from '@/components/dashboard/TestPlayground';
@@ -46,7 +54,10 @@ const validateJsonSchema = (json: string): { valid: boolean; error?: string; sch
     }
 
     // Check for valid type
-    if (parsed.type && !['object', 'array', 'string', 'number', 'integer', 'boolean', 'null'].includes(parsed.type)) {
+    if (
+      parsed.type &&
+      !['object', 'array', 'string', 'number', 'integer', 'boolean', 'null'].includes(parsed.type)
+    ) {
       return { valid: false, error: `Invalid type: ${parsed.type}` };
     }
 
@@ -76,7 +87,9 @@ const validateJsonSchema = (json: string): { valid: boolean; error?: string; sch
 };
 
 // Validate and parse OpenAPI spec
-const validateOpenApiSpec = (json: string): { valid: boolean; error?: string; inputSchema?: object; outputSchema?: object } => {
+const validateOpenApiSpec = (
+  json: string
+): { valid: boolean; error?: string; inputSchema?: object; outputSchema?: object } => {
   if (!json.trim()) return { valid: true };
 
   try {
@@ -110,7 +123,9 @@ const validateOpenApiSpec = (json: string): { valid: boolean; error?: string; in
           // Output from responses
           const responses = postOp.responses as Record<string, unknown> | undefined;
           if (responses) {
-            const successResponse = (responses['200'] || responses['201']) as Record<string, unknown> | undefined;
+            const successResponse = (responses['200'] || responses['201']) as
+              | Record<string, unknown>
+              | undefined;
             if (successResponse?.content) {
               const content = successResponse.content as Record<string, { schema?: object }>;
               const jsonContent = content['application/json'];
@@ -170,7 +185,12 @@ const resolveRef = (schema: object, root: object, depth = 0): object => {
 };
 
 // Generate OpenAPI spec from JSON schemas
-const generateOpenApiSpec = (inputSchema: object | null, outputSchema: object | null, agentName: string, endpointUrl: string): string => {
+const generateOpenApiSpec = (
+  inputSchema: object | null,
+  outputSchema: object | null,
+  agentName: string,
+  endpointUrl: string
+): string => {
   const spec = {
     openapi: '3.0.3',
     info: {
@@ -178,9 +198,7 @@ const generateOpenApiSpec = (inputSchema: object | null, outputSchema: object | 
       version: '1.0.0',
       description: `API specification for ${agentName}`,
     },
-    servers: [
-      { url: endpointUrl || 'https://api.example.com' },
-    ],
+    servers: [{ url: endpointUrl || 'https://api.example.com' }],
     paths: {
       '/': {
         post: {
@@ -214,7 +232,7 @@ const generateOpenApiSpec = (inputSchema: object | null, outputSchema: object | 
 const normalizeSchemaType = (type: unknown): SchemaField['type'] => {
   if (Array.isArray(type)) {
     // Find first non-null type
-    const nonNullType = type.find(t => t !== 'null');
+    const nonNullType = type.find((t) => t !== 'null');
     return (nonNullType as SchemaField['type']) || 'string';
   }
   if (typeof type === 'string') {
@@ -227,7 +245,10 @@ const jsonSchemaToFields = (schema: object | null): SchemaField[] => {
   if (!schema || typeof schema !== 'object') {
     return [{ id: '1', name: '', type: 'string', description: '', required: false }];
   }
-  const s = schema as { properties?: Record<string, { type?: unknown; description?: string; enum?: string[] }>; required?: string[] };
+  const s = schema as {
+    properties?: Record<string, { type?: unknown; description?: string; enum?: string[] }>;
+    required?: string[];
+  };
   if (!s.properties || Object.keys(s.properties).length === 0) {
     return [{ id: '1', name: '', type: 'string', description: '', required: false }];
   }
@@ -246,7 +267,9 @@ export default function ConnectionTab({ agent, onSave, saving, secretKey }: Prop
     agent.endpointUrl === PLACEHOLDER_ENDPOINT ? '' : agent.endpointUrl
   );
   // Convert ms to seconds for UI display
-  const [timeoutVal, setTimeoutVal] = useState(String(Math.floor((agent.timeoutMs || 30000) / 1000)));
+  const [timeoutVal, setTimeoutVal] = useState(
+    String(Math.floor((agent.timeoutMs || 30000) / 1000))
+  );
   const [schemaMode, setSchemaMode] = useState<'visual' | 'json' | 'openapi'>('visual');
 
   // Visual schema builder state - initialize from agent's saved schemas
@@ -336,7 +359,9 @@ export default function ConnectionTab({ agent, onSave, saving, secretKey }: Prop
       const result = validateOpenApiSpec(openApiSpec);
       if (result.valid) {
         setInputSchemaJson(result.inputSchema ? JSON.stringify(result.inputSchema, null, 2) : '');
-        setOutputSchemaJson(result.outputSchema ? JSON.stringify(result.outputSchema, null, 2) : '');
+        setOutputSchemaJson(
+          result.outputSchema ? JSON.stringify(result.outputSchema, null, 2) : ''
+        );
       }
     } else {
       // From visual mode
@@ -357,8 +382,12 @@ export default function ConnectionTab({ agent, onSave, saving, secretKey }: Prop
       inputSchema = fieldsToJsonSchema(inputFields);
       outputSchema = fieldsToJsonSchema(outputFields);
     } else if (schemaMode === 'json') {
-      try { inputSchema = inputSchemaJson ? JSON.parse(inputSchemaJson) : null; } catch {}
-      try { outputSchema = outputSchemaJson ? JSON.parse(outputSchemaJson) : null; } catch {}
+      try {
+        inputSchema = inputSchemaJson ? JSON.parse(inputSchemaJson) : null;
+      } catch {}
+      try {
+        outputSchema = outputSchemaJson ? JSON.parse(outputSchemaJson) : null;
+      } catch {}
     }
 
     setOpenApiSpec(generateOpenApiSpec(inputSchema, outputSchema, agent.name, endpointUrl));
@@ -384,20 +413,20 @@ export default function ConnectionTab({ agent, onSave, saving, secretKey }: Prop
   const updateField = (isInput: boolean, id: string, updates: Partial<SchemaField>) => {
     const setter = isInput ? setInputFields : setOutputFields;
     const fields = isInput ? inputFields : outputFields;
-    setter(fields.map(f => f.id === id ? { ...f, ...updates } : f));
+    setter(fields.map((f) => (f.id === id ? { ...f, ...updates } : f)));
   };
 
   const removeField = (isInput: boolean, id: string) => {
     const setter = isInput ? setInputFields : setOutputFields;
     const fields = isInput ? inputFields : outputFields;
-    setter(fields.filter(f => f.id !== id));
+    setter(fields.filter((f) => f.id !== id));
   };
 
   const fieldsToJsonSchema = (fields: SchemaField[]) => {
     const properties: Record<string, object> = {};
     const required: string[] = [];
 
-    fields.forEach(field => {
+    fields.forEach((field) => {
       if (!field.name) return;
       properties[field.name] = {
         type: field.type,
@@ -430,10 +459,14 @@ export default function ConnectionTab({ agent, onSave, saving, secretKey }: Prop
       // Parse JSON mode schemas
       try {
         inputSchema = inputSchemaJson ? JSON.parse(inputSchemaJson) : null;
-      } catch { /* invalid JSON, skip */ }
+      } catch {
+        /* invalid JSON, skip */
+      }
       try {
         outputSchema = outputSchemaJson ? JSON.parse(outputSchemaJson) : null;
-      } catch { /* invalid JSON, skip */ }
+      } catch {
+        /* invalid JSON, skip */
+      }
     } else if (schemaMode === 'openapi') {
       // Extract from OpenAPI spec
       const result = validateOpenApiSpec(openApiSpec);
@@ -455,7 +488,9 @@ export default function ConnectionTab({ agent, onSave, saving, secretKey }: Prop
     <div className={styles.panel}>
       <div className={styles.header}>
         <h2 className={styles.title}>Connect Your Agent</h2>
-        <p className={styles.desc}>Define your endpoint, describe what your agent accepts and returns.</p>
+        <p className={styles.desc}>
+          Define your endpoint, describe what your agent accepts and returns.
+        </p>
       </div>
 
       {/* Endpoint Section - Two column layout */}
@@ -471,7 +506,9 @@ export default function ConnectionTab({ agent, onSave, saving, secretKey }: Prop
                 onChange={(e) => setEndpointUrl(e.target.value)}
                 placeholder="https://your-server.com/api/agent"
               />
-              <p className={styles.formHint}>Where should we forward requests? Must accept POST and return JSON.</p>
+              <p className={styles.formHint}>
+                Where should we forward requests? Must accept POST and return JSON.
+              </p>
             </div>
           </div>
           <div className={styles.sideColumn}>
@@ -533,30 +570,44 @@ export default function ConnectionTab({ agent, onSave, saving, secretKey }: Prop
                         type="text"
                         placeholder="field_name"
                         value={field.name}
-                        onChange={(e) => updateField(true, field.id, { name: e.target.value.replace(/\s/g, '_').toLowerCase() })}
+                        onChange={(e) =>
+                          updateField(true, field.id, {
+                            name: e.target.value.replace(/\s/g, '_').toLowerCase(),
+                          })
+                        }
                         className={styles.fieldName}
                       />
                       <select
                         value={field.type || 'string'}
-                        onChange={(e) => updateField(true, field.id, { type: e.target.value as SchemaField['type'] })}
+                        onChange={(e) =>
+                          updateField(true, field.id, {
+                            type: e.target.value as SchemaField['type'],
+                          })
+                        }
                         className={styles.fieldType}
                       >
-                        {fieldTypes.map(t => (
-                          <option key={t.value} value={t.value}>{t.label}</option>
+                        {fieldTypes.map((t) => (
+                          <option key={t.value} value={t.value}>
+                            {t.label}
+                          </option>
                         ))}
                       </select>
                       <input
                         type="text"
                         placeholder="Description (optional)"
                         value={field.description}
-                        onChange={(e) => updateField(true, field.id, { description: e.target.value })}
+                        onChange={(e) =>
+                          updateField(true, field.id, { description: e.target.value })
+                        }
                         className={styles.fieldDesc}
                       />
                       <label className={styles.fieldRequired}>
                         <input
                           type="checkbox"
                           checked={field.required}
-                          onChange={(e) => updateField(true, field.id, { required: e.target.checked })}
+                          onChange={(e) =>
+                            updateField(true, field.id, { required: e.target.checked })
+                          }
                         />
                         <span>Required</span>
                       </label>
@@ -594,30 +645,44 @@ export default function ConnectionTab({ agent, onSave, saving, secretKey }: Prop
                         type="text"
                         placeholder="field_name"
                         value={field.name}
-                        onChange={(e) => updateField(false, field.id, { name: e.target.value.replace(/\s/g, '_').toLowerCase() })}
+                        onChange={(e) =>
+                          updateField(false, field.id, {
+                            name: e.target.value.replace(/\s/g, '_').toLowerCase(),
+                          })
+                        }
                         className={styles.fieldName}
                       />
                       <select
                         value={field.type || 'string'}
-                        onChange={(e) => updateField(false, field.id, { type: e.target.value as SchemaField['type'] })}
+                        onChange={(e) =>
+                          updateField(false, field.id, {
+                            type: e.target.value as SchemaField['type'],
+                          })
+                        }
                         className={styles.fieldType}
                       >
-                        {fieldTypes.map(t => (
-                          <option key={t.value} value={t.value}>{t.label}</option>
+                        {fieldTypes.map((t) => (
+                          <option key={t.value} value={t.value}>
+                            {t.label}
+                          </option>
                         ))}
                       </select>
                       <input
                         type="text"
                         placeholder="Description (optional)"
                         value={field.description}
-                        onChange={(e) => updateField(false, field.id, { description: e.target.value })}
+                        onChange={(e) =>
+                          updateField(false, field.id, { description: e.target.value })
+                        }
                         className={styles.fieldDesc}
                       />
                       <label className={styles.fieldRequired}>
                         <input
                           type="checkbox"
                           checked={field.required}
-                          onChange={(e) => updateField(false, field.id, { required: e.target.checked })}
+                          onChange={(e) =>
+                            updateField(false, field.id, { required: e.target.checked })
+                          }
                         />
                         <span>Required</span>
                       </label>
@@ -643,17 +708,32 @@ export default function ConnectionTab({ agent, onSave, saving, secretKey }: Prop
             <div className={styles.schemaJsonPanel}>
               <div className={styles.schemaJsonHeader}>
                 <span>Input Schema</span>
-                {inputSchemaJson && (
-                  inputSchemaError ? (
-                    <span style={{ color: 'var(--error)', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                {inputSchemaJson &&
+                  (inputSchemaError ? (
+                    <span
+                      style={{
+                        color: 'var(--error)',
+                        fontSize: '12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                      }}
+                    >
                       <AlertCircle size={12} /> {inputSchemaError}
                     </span>
                   ) : (
-                    <span style={{ color: 'var(--success)', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <span
+                      style={{
+                        color: 'var(--success)',
+                        fontSize: '12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                      }}
+                    >
                       <CheckCircle size={12} /> Valid
                     </span>
-                  )
-                )}
+                  ))}
               </div>
               <textarea
                 value={inputSchemaJson}
@@ -666,17 +746,32 @@ export default function ConnectionTab({ agent, onSave, saving, secretKey }: Prop
             <div className={styles.schemaJsonPanel}>
               <div className={styles.schemaJsonHeader}>
                 <span>Output Schema</span>
-                {outputSchemaJson && (
-                  outputSchemaError ? (
-                    <span style={{ color: 'var(--error)', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                {outputSchemaJson &&
+                  (outputSchemaError ? (
+                    <span
+                      style={{
+                        color: 'var(--error)',
+                        fontSize: '12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                      }}
+                    >
                       <AlertCircle size={12} /> {outputSchemaError}
                     </span>
                   ) : (
-                    <span style={{ color: 'var(--success)', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <span
+                      style={{
+                        color: 'var(--success)',
+                        fontSize: '12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                      }}
+                    >
                       <CheckCircle size={12} /> Valid
                     </span>
-                  )
-                )}
+                  ))}
               </div>
               <textarea
                 value={outputSchemaJson}
@@ -693,7 +788,8 @@ export default function ConnectionTab({ agent, onSave, saving, secretKey }: Prop
               <div className={styles.openApiInfo}>
                 <p>Paste an OpenAPI 3.0 specification or edit the generated one below.</p>
                 <p className={styles.openApiHint}>
-                  The input schema is extracted from <code>requestBody</code> and output from <code>responses.200</code>.
+                  The input schema is extracted from <code>requestBody</code> and output from{' '}
+                  <code>responses.200</code>.
                 </p>
               </div>
               <div className={styles.openApiActions}>
@@ -754,24 +850,42 @@ export default function ConnectionTab({ agent, onSave, saving, secretKey }: Prop
             <div className={styles.openApiEditor}>
               <div className={styles.schemaJsonHeader}>
                 <span>OpenAPI 3.0 Specification</span>
-                {openApiSpec && (
-                  openApiError ? (
-                    <span style={{ color: 'var(--error)', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                {openApiSpec &&
+                  (openApiError ? (
+                    <span
+                      style={{
+                        color: 'var(--error)',
+                        fontSize: '12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                      }}
+                    >
                       <AlertCircle size={12} /> {openApiError}
                     </span>
                   ) : (
-                    <span style={{ color: 'var(--success)', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <span
+                      style={{
+                        color: 'var(--success)',
+                        fontSize: '12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                      }}
+                    >
                       <CheckCircle size={12} /> Valid
                     </span>
-                  )
-                )}
+                  ))}
               </div>
               <textarea
                 value={openApiSpec}
                 onChange={(e) => handleOpenApiChange(e.target.value)}
                 placeholder='{"openapi": "3.0.3", "info": {...}, "paths": {...}}'
                 spellCheck={false}
-                style={{ borderColor: openApiError ? 'var(--error)' : undefined, minHeight: '400px' }}
+                style={{
+                  borderColor: openApiError ? 'var(--error)' : undefined,
+                  minHeight: '400px',
+                }}
               />
             </div>
           </div>
@@ -785,7 +899,11 @@ export default function ConnectionTab({ agent, onSave, saving, secretKey }: Prop
           Test your agent before publishing. We recommend at least one successful test.
         </p>
 
-        <TestPlayground endpointUrl={endpointUrl} inputFields={playgroundFields} secretKey={secretKey} />
+        <TestPlayground
+          endpointUrl={endpointUrl}
+          inputFields={playgroundFields}
+          secretKey={secretKey}
+        />
       </div>
 
       <div className={styles.actionBar}>

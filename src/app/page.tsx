@@ -30,11 +30,14 @@ export default function ConnectPage() {
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [inviteCode, setInviteCode] = useState<string>('');
   const [handle, setHandle] = useState<string>('');
-  const [pendingAuth, setPendingAuth] = useState<{ message: string; signature: string } | null>(null);
+  const [pendingAuth, setPendingAuth] = useState<{ message: string; signature: string } | null>(
+    null
+  );
   const isSigningRef = useRef(false);
   const hasInitiatedRef = useRef(false);
 
-  const isAuthenticated = token && walletAddress && walletAddress.toLowerCase() === address?.toLowerCase();
+  const isAuthenticated =
+    token && walletAddress && walletAddress.toLowerCase() === address?.toLowerCase();
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -56,7 +59,10 @@ export default function ConnectPage() {
       const signature = await signMessageAsync({ message });
 
       try {
-        const { token: jwtToken, walletAddress: verifiedAddress } = await authApi.verify(message, signature);
+        const { token: jwtToken, walletAddress: verifiedAddress } = await authApi.verify(
+          message,
+          signature
+        );
         setAuth(jwtToken, verifiedAddress);
         router.push('/dashboard');
       } catch (verifyErr: unknown) {
@@ -72,7 +78,11 @@ export default function ConnectPage() {
     } catch (err: unknown) {
       console.error('SIWE authentication failed:', err);
       const error = err as Error & { code?: string };
-      if (error.message?.includes('rejected') || error.message?.includes('denied') || error.message?.includes('User rejected')) {
+      if (
+        error.message?.includes('rejected') ||
+        error.message?.includes('denied') ||
+        error.message?.includes('User rejected')
+      ) {
         setSigningState('rejected');
       } else {
         setSigningState('error');
@@ -83,42 +93,45 @@ export default function ConnectPage() {
     }
   }, [address, chainId, signMessageAsync, setAuth, router]);
 
-  const handleInviteSubmit = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!pendingAuth || !inviteCode.trim() || !handle.trim()) return;
+  const handleInviteSubmit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!pendingAuth || !inviteCode.trim() || !handle.trim()) return;
 
-    setSigningState('submitting');
-    setErrorMessage('');
+      setSigningState('submitting');
+      setErrorMessage('');
 
-    try {
-      const { token: jwtToken, walletAddress: verifiedAddress } = await authApi.verify(
-        pendingAuth.message,
-        pendingAuth.signature,
-        inviteCode.trim(),
-        handle.trim()
-      );
-      setAuth(jwtToken, verifiedAddress);
-      router.push('/dashboard');
-    } catch (err: unknown) {
-      const error = err as Error & { code?: string };
-      if (error.code === 'INVALID_INVITE_CODE') {
-        setSigningState('invite_required');
-        setErrorMessage('Invalid or already used invite code');
-      } else if (error.code === 'INVITE_EXPIRED') {
-        setSigningState('invite_required');
-        setErrorMessage('Your invite code has expired');
-      } else if (error.code === 'INVALID_HANDLE') {
-        setSigningState('invite_required');
-        setErrorMessage(error.message || 'Invalid handle');
-      } else if (error.code === 'HANDLE_TAKEN') {
-        setSigningState('invite_required');
-        setErrorMessage('This handle is already taken');
-      } else {
-        setSigningState('error');
-        setErrorMessage(error.message || 'Registration failed');
+      try {
+        const { token: jwtToken, walletAddress: verifiedAddress } = await authApi.verify(
+          pendingAuth.message,
+          pendingAuth.signature,
+          inviteCode.trim(),
+          handle.trim()
+        );
+        setAuth(jwtToken, verifiedAddress);
+        router.push('/dashboard');
+      } catch (err: unknown) {
+        const error = err as Error & { code?: string };
+        if (error.code === 'INVALID_INVITE_CODE') {
+          setSigningState('invite_required');
+          setErrorMessage('Invalid or already used invite code');
+        } else if (error.code === 'INVITE_EXPIRED') {
+          setSigningState('invite_required');
+          setErrorMessage('Your invite code has expired');
+        } else if (error.code === 'INVALID_HANDLE') {
+          setSigningState('invite_required');
+          setErrorMessage(error.message || 'Invalid handle');
+        } else if (error.code === 'HANDLE_TAKEN') {
+          setSigningState('invite_required');
+          setErrorMessage('This handle is already taken');
+        } else {
+          setSigningState('error');
+          setErrorMessage(error.message || 'Registration failed');
+        }
       }
-    }
-  }, [pendingAuth, inviteCode, handle, setAuth, router]);
+    },
+    [pendingAuth, inviteCode, handle, setAuth, router]
+  );
 
   useEffect(() => {
     if (isConnected && address && signingState === 'idle') {
@@ -186,8 +199,12 @@ export default function ConnectPage() {
           <h1 className={styles.cardTitle}>Sign-in cancelled</h1>
           <p className={styles.cardDesc}>You declined the signature request</p>
           <div className={styles.cardActions}>
-            <button className={styles.btnPrimary} onClick={handleTryAgain}>Try again</button>
-            <button className={styles.btnGhost} onClick={handleDifferentWallet}>Use different wallet</button>
+            <button className={styles.btnPrimary} onClick={handleTryAgain}>
+              Try again
+            </button>
+            <button className={styles.btnGhost} onClick={handleDifferentWallet}>
+              Use different wallet
+            </button>
           </div>
         </div>
       </div>
@@ -202,8 +219,12 @@ export default function ConnectPage() {
           <h1 className={styles.cardTitle}>Something went wrong</h1>
           <p className={styles.cardDesc}>{errorMessage || "We couldn't verify your wallet"}</p>
           <div className={styles.cardActions}>
-            <button className={styles.btnPrimary} onClick={handleTryAgain}>Try again</button>
-            <button className={styles.btnGhost} onClick={handleDifferentWallet}>Use different wallet</button>
+            <button className={styles.btnPrimary} onClick={handleTryAgain}>
+              Try again
+            </button>
+            <button className={styles.btnGhost} onClick={handleDifferentWallet}>
+              Use different wallet
+            </button>
           </div>
         </div>
       </div>
@@ -216,18 +237,16 @@ export default function ConnectPage() {
         <div className={styles.card}>
           <Logo size={48} />
           <h1 className={styles.cardTitle}>Early access</h1>
-          <p className={styles.cardDesc}>
-            Enter your invite code to create an account
-          </p>
-          {errorMessage && (
-            <p className={styles.cardError}>{errorMessage}</p>
-          )}
+          <p className={styles.cardDesc}>Enter your invite code to create an account</p>
+          {errorMessage && <p className={styles.cardError}>{errorMessage}</p>}
           <form onSubmit={handleInviteSubmit} className={styles.inviteForm}>
             <label className={styles.inputLabel}>Invite code</label>
             <input
               type="text"
               value={inviteCode}
-              onChange={(e) => setInviteCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+              onChange={(e) =>
+                setInviteCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))
+              }
               placeholder="A7K9X2"
               className={styles.inviteInput}
               required
@@ -247,7 +266,11 @@ export default function ConnectPage() {
                 maxLength={30}
               />
             </div>
-            <button type="submit" className={styles.btnPrimary} disabled={!inviteCode.trim() || !handle.trim()}>
+            <button
+              type="submit"
+              className={styles.btnPrimary}
+              disabled={!inviteCode.trim() || !handle.trim()}
+            >
               Continue
             </button>
           </form>
@@ -295,8 +318,10 @@ export default function ConnectPage() {
 
         <div className={styles.brandContent}>
           <h1 className={styles.brandTitle}>
-            Your API.<br />
-            Your rules.<br />
+            Your API.
+            <br />
+            Your rules.
+            <br />
             Your revenue.
           </h1>
           <p className={styles.brandSubtitle}>
@@ -331,23 +356,21 @@ export default function ConnectPage() {
           <div className={styles.badge}>Private Beta</div>
 
           <h2 className={styles.connectTitle}>For Builders</h2>
-          <p className={styles.connectDesc}>
-            List your APIs and start earning
-          </p>
+          <p className={styles.connectDesc}>List your APIs and start earning</p>
 
           <div className={styles.connectAction}>
             <ConnectButton label="Connect Wallet" />
           </div>
-          <p className={styles.connectHint}>Invite code required · <a href="https://agentokratia.com/#waitlist">Get access</a></p>
+          <p className={styles.connectHint}>
+            Invite code required · <a href="https://agentokratia.com/#waitlist">Get access</a>
+          </p>
 
           <div className={styles.divider}>
             <span>or</span>
           </div>
 
           <h2 className={styles.connectTitle}>For Consumers</h2>
-          <p className={styles.connectDesc}>
-            Browse and use APIs instantly
-          </p>
+          <p className={styles.connectDesc}>Browse and use APIs instantly</p>
 
           <Link href="/marketplace" className={styles.browseBtn}>
             Browse Marketplace

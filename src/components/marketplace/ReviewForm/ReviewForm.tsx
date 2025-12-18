@@ -87,7 +87,11 @@ export function ReviewForm({
   }, [ownerHandle, agentSlug]);
 
   // Recovery function for pending transactions
-  const recoverPendingTransaction = async (data: { txHash: string; reviewId: string; chainId: number }) => {
+  const recoverPendingTransaction = async (data: {
+    txHash: string;
+    reviewId: string;
+    chainId: number;
+  }) => {
     setStatus('processing');
     setTxHash(data.txHash);
 
@@ -154,21 +158,23 @@ export function ReviewForm({
       setTxHash(hash);
 
       // Step 3: IMMEDIATELY save to localStorage (backup)
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({
-        ownerHandle,
-        agentSlug,
-        reviewId: review.id,
-        txHash: hash,
-        chainId: networkConfig.chainId,
-        timestamp: Date.now(),
-      }));
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({
+          ownerHandle,
+          agentSlug,
+          reviewId: review.id,
+          txHash: hash,
+          chainId: networkConfig.chainId,
+          timestamp: Date.now(),
+        })
+      );
 
       // Step 4: Wait for receipt
       await waitForTransactionReceipt(config, { hash });
 
       // Step 5: Confirm with backend (CRITICAL)
       await confirmReview(review.id, hash, networkConfig.chainId);
-
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to submit review';
       if (message.includes('rejected') || message.includes('User rejected')) {
@@ -299,7 +305,10 @@ export function ReviewForm({
                 onClick={() => setRating(star)}
                 type="button"
               >
-                <Star size={28} fill={star <= (hoveredRating || rating) ? 'currentColor' : 'none'} />
+                <Star
+                  size={28}
+                  fill={star <= (hoveredRating || rating) ? 'currentColor' : 'none'}
+                />
               </button>
             ))}
           </div>

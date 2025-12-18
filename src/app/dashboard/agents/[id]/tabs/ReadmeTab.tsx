@@ -45,7 +45,9 @@ Describe what your agent does in plain language.
 `;
 
 export default function ReadmeTab({ agent, onSave, saving }: Props) {
-  const [readme, setReadme] = useState(agent.readme || defaultReadme.replace('{agent.name}', agent.name));
+  const [readme, setReadme] = useState(
+    agent.readme || defaultReadme.replace('{agent.name}', agent.name)
+  );
   const [viewMode, setViewMode] = useState<'edit' | 'preview'>('edit');
 
   const insertMarkdown = (before: string, after: string) => {

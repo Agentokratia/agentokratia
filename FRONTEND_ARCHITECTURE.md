@@ -3,6 +3,7 @@
 > Reference document for frontend implementation. All agents and developers should follow these conventions.
 
 ## Table of Contents
+
 1. [Overview](#overview)
 2. [Tech Stack](#tech-stack)
 3. [Folder Structure](#folder-structure)
@@ -25,6 +26,7 @@ Agentokratia is a marketplace for AI agents to discover, purchase, and consume A
 2. **API Consumers** (AI Agents/Developers) - Discover and pay for API calls
 
 ### Core Principles
+
 - **Simplicity over complexity** - MVP-focused, avoid over-engineering
 - **Existing design system** - Reuse styles from `public/styles.css`
 - **Headless components** - Use Radix UI only for complex interactions
@@ -36,42 +38,48 @@ Agentokratia is a marketplace for AI agents to discover, purchase, and consume A
 ## Tech Stack
 
 ### Core
-| Technology | Version | Purpose |
-|------------|---------|---------|
-| Next.js | 14.x | Framework (App Router) |
-| TypeScript | 5.x | Type safety |
-| React | 18.x | UI library |
+
+| Technology | Version | Purpose                |
+| ---------- | ------- | ---------------------- |
+| Next.js    | 14.x    | Framework (App Router) |
+| TypeScript | 5.x     | Type safety            |
+| React      | 18.x    | UI library             |
 
 ### Styling
-| Technology | Purpose |
-|------------|---------|
-| CSS Modules | Component-scoped styles |
+
+| Technology    | Purpose                              |
+| ------------- | ------------------------------------ |
+| CSS Modules   | Component-scoped styles              |
 | CSS Variables | Design tokens (from existing system) |
 
 ### State Management
-| Technology | Purpose |
-|------------|---------|
-| Zustand | Global client state (wallet, user, UI) |
-| TanStack Query | Server state, caching, mutations |
+
+| Technology     | Purpose                                |
+| -------------- | -------------------------------------- |
+| Zustand        | Global client state (wallet, user, UI) |
+| TanStack Query | Server state, caching, mutations       |
 
 ### Web3
-| Technology | Version | Purpose |
-|------------|---------|---------|
-| wagmi | 2.x | React hooks for Ethereum |
-| viem | 2.x | TypeScript Ethereum library |
-| @rainbow-me/rainbowkit | 2.x | Wallet connection UI |
+
+| Technology             | Version | Purpose                     |
+| ---------------------- | ------- | --------------------------- |
+| wagmi                  | 2.x     | React hooks for Ethereum    |
+| viem                   | 2.x     | TypeScript Ethereum library |
+| @rainbow-me/rainbowkit | 2.x     | Wallet connection UI        |
 
 ### UI Components
-| Technology | Purpose |
-|------------|---------|
-| Radix UI | Headless primitives (Dialog, Dropdown, Toast) |
-| Lucide React | Icons |
+
+| Technology   | Purpose                                       |
+| ------------ | --------------------------------------------- |
+| Radix UI     | Headless primitives (Dialog, Dropdown, Toast) |
+| Lucide React | Icons                                         |
 
 ### Development
-| Technology | Purpose |
-|------------|---------|
-| ESLint | Code linting |
-| Prettier | Code formatting |
+
+| Technology | Purpose         |
+| ---------- | --------------- |
+| ESLint     | Code linting    |
+| Prettier   | Code formatting |
 
 ---
 
@@ -210,21 +218,21 @@ Port these to `globals.css`:
 ```css
 :root {
   /* Core Colors */
-  --ink: #1A1A1A;
-  --stone: #6B6B6B;
-  --sand: #E5E5E2;
-  --cloud: #F2F2EF;
-  --paper: #FAFAF8;
-  --white: #FFFFFF;
+  --ink: #1a1a1a;
+  --stone: #6b6b6b;
+  --sand: #e5e5e2;
+  --cloud: #f2f2ef;
+  --paper: #fafaf8;
+  --white: #ffffff;
 
   /* Accent Colors */
-  --success: #22C55E;
+  --success: #22c55e;
   --success-light: rgba(34, 197, 94, 0.1);
-  --error: #EF4444;
+  --error: #ef4444;
   --error-light: rgba(239, 68, 68, 0.1);
-  --warning: #F59E0B;
+  --warning: #f59e0b;
   --warning-light: rgba(245, 158, 11, 0.1);
-  --info: #3B82F6;
+  --info: #3b82f6;
   --info-light: rgba(59, 130, 246, 0.1);
 
   /* Typography */
@@ -251,20 +259,21 @@ Port these to `globals.css`:
 
 ### Typography Scale
 
-| Element | Font | Size | Weight | Line Height |
-|---------|------|------|--------|-------------|
-| h1 | Newsreader | 48px | 400 | 1.2 |
-| h2 | Newsreader | 32px | 400 | 1.3 |
-| h3 | Newsreader | 24px | 400 | 1.4 |
-| h4 | DM Sans | 18px | 600 | 1.4 |
-| body | DM Sans | 16px | 400 | 1.6 |
-| small | DM Sans | 14px | 400 | 1.5 |
-| caption | DM Sans | 12px | 400 | 1.4 |
-| code | Space Mono | 13px | 400 | 1.5 |
+| Element | Font       | Size | Weight | Line Height |
+| ------- | ---------- | ---- | ------ | ----------- |
+| h1      | Newsreader | 48px | 400    | 1.2         |
+| h2      | Newsreader | 32px | 400    | 1.3         |
+| h3      | Newsreader | 24px | 400    | 1.4         |
+| h4      | DM Sans    | 18px | 600    | 1.4         |
+| body    | DM Sans    | 16px | 400    | 1.6         |
+| small   | DM Sans    | 14px | 400    | 1.5         |
+| caption | DM Sans    | 12px | 400    | 1.4         |
+| code    | Space Mono | 13px | 400    | 1.5         |
 
 ### Component Variants
 
 #### Buttons
+
 - `btn-primary` - Black background, white text (primary actions)
 - `btn-secondary` - White background, border (secondary actions)
 - `btn-success` - Green background (confirm/success actions)
@@ -272,12 +281,14 @@ Port these to `globals.css`:
 - Sizes: `btn-sm`, default, `btn-lg`
 
 #### Badges
+
 - `badge-success` - Green (active, online, verified)
 - `badge-warning` - Orange (pending, beta)
 - `badge-error` - Red (error, failed)
 - `badge-info` - Blue (info, new)
 
 #### Cards
+
 - Default card with white background, sand border, radius-lg
 - Card header with flex layout for title + actions
 
@@ -379,6 +390,7 @@ export function Modal({ open, onOpenChange, title, children }: ModalProps) {
 ### Zustand Stores
 
 #### Auth Store
+
 ```tsx
 // lib/store/useAuthStore.ts
 import { create } from 'zustand';
@@ -409,6 +421,7 @@ export const useAuthStore = create<AuthState>()(
 ```
 
 #### UI Store
+
 ```tsx
 // lib/store/useUiStore.ts
 import { create } from 'zustand';
@@ -670,22 +683,24 @@ export function useWalletAuth() {
 ## Pages & Routing
 
 ### Public Pages
-| Route | Page | Description |
-|-------|------|-------------|
-| `/` | Landing | Marketing page, hero, features |
-| `/marketplace` | Browse | Search and filter APIs |
-| `/marketplace/[id]` | Detail | API details, pricing, docs |
+
+| Route               | Page    | Description                    |
+| ------------------- | ------- | ------------------------------ |
+| `/`                 | Landing | Marketing page, hero, features |
+| `/marketplace`      | Browse  | Search and filter APIs         |
+| `/marketplace/[id]` | Detail  | API details, pricing, docs     |
 
 ### Protected Pages (require wallet)
-| Route | Page | Description |
-|-------|------|-------------|
-| `/dashboard` | Overview | Stats, recent activity |
-| `/dashboard/apis` | My APIs | List of user's APIs |
-| `/dashboard/apis/new` | Create API | API creation form |
-| `/dashboard/apis/[id]/edit` | Edit API | Edit existing API |
-| `/dashboard/usage` | Usage | API usage analytics |
-| `/dashboard/earnings` | Earnings | Revenue, payouts |
-| `/dashboard/settings` | Settings | Account settings |
+
+| Route                       | Page       | Description            |
+| --------------------------- | ---------- | ---------------------- |
+| `/dashboard`                | Overview   | Stats, recent activity |
+| `/dashboard/apis`           | My APIs    | List of user's APIs    |
+| `/dashboard/apis/new`       | Create API | API creation form      |
+| `/dashboard/apis/[id]/edit` | Edit API   | Edit existing API      |
+| `/dashboard/usage`          | Usage      | API usage analytics    |
+| `/dashboard/earnings`       | Earnings   | Revenue, payouts       |
+| `/dashboard/settings`       | Settings   | Account settings       |
 
 ### Route Protection
 
@@ -767,18 +782,21 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
 ## Coding Conventions
 
 ### TypeScript
+
 - Enable strict mode
 - Explicit return types on functions
 - Use interfaces for object shapes, types for unions
 - No `any` - use `unknown` if type is truly unknown
 
 ### React
+
 - Functional components only
 - Use `forwardRef` for components accepting refs
 - Destructure props in function signature
 - Use early returns for conditional rendering
 
 ### Naming
+
 - **Components**: PascalCase (`Button.tsx`, `ApiCard.tsx`)
 - **Hooks**: camelCase with `use` prefix (`useApi.ts`)
 - **Utilities**: camelCase (`formatCurrency.ts`)
@@ -786,18 +804,21 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
 - **Constants**: SCREAMING_SNAKE_CASE
 
 ### File Organization
+
 - One component per file
 - Co-locate styles with components
 - Index files for re-exports only
 - Group by feature in `components/features/`
 
 ### CSS
+
 - Use CSS variables for all colors, spacing, fonts
 - Mobile-first responsive design
 - Use CSS Modules for component styles
 - Global styles only in `globals.css`
 
 ### Imports Order
+
 ```tsx
 // 1. React
 import { useState, useEffect } from 'react';
@@ -826,27 +847,32 @@ import styles from './Component.module.css';
 ## MVP Implementation Order
 
 ### Phase 1: Foundation
+
 1. Project setup (Next.js, TypeScript, dependencies)
 2. Design system (globals.css, base components)
 3. Layout components (Navbar, Footer, Sidebar)
 4. Web3 provider setup
 
 ### Phase 2: Public Pages
+
 5. Landing page
 6. Marketplace browse page
 7. API detail page
 
 ### Phase 3: Dashboard
+
 8. Dashboard layout with sidebar
 9. Dashboard overview
 10. My APIs list + create/edit forms
 
 ### Phase 4: Core Features
+
 11. Usage analytics page
 12. Earnings page
 13. Settings page
 
 ### Phase 5: Polish
+
 14. Loading states, error handling
 15. Mobile responsiveness
 16. Performance optimization
@@ -858,11 +884,13 @@ import styles from './Component.module.css';
 ### Overview
 
 The frontend requires a backend API for:
+
 1. **Off-chain agent metadata** (name, description, logo, docs)
 2. **Usage analytics** (call logs, earnings tracking)
 3. **Marketplace search** (indexed agent data)
 
 On-chain data (via smart contracts):
+
 - Agent ownership (ERC-721 token)
 - Agent ID, price, payment address
 - Total calls, total earned (updated by x402 facilitator)
@@ -870,6 +898,7 @@ On-chain data (via smart contracts):
 ### API Endpoints Required
 
 #### Authentication
+
 ```
 POST /api/auth/nonce
   → { nonce: string }
@@ -884,6 +913,7 @@ GET /api/auth/me
 ```
 
 #### Agents (Provider Dashboard)
+
 ```
 GET /api/agents
   Headers: Authorization: Bearer <token>
@@ -913,6 +943,7 @@ GET /api/agents/:id/stats
 ```
 
 #### Marketplace (Public)
+
 ```
 GET /api/marketplace
   Query: ?category=&search=&sortBy=calls|rating|price|newest&offset=0&limit=20
@@ -926,6 +957,7 @@ GET /api/marketplace/categories
 ```
 
 #### Payments & Earnings
+
 ```
 GET /api/earnings
   Headers: Authorization: Bearer <token>
@@ -943,6 +975,7 @@ POST /api/payouts
 ```
 
 #### Call Logs (for analytics)
+
 ```
 GET /api/calls
   Headers: Authorization: Bearer <token>
@@ -960,94 +993,97 @@ POST /api/calls/log
 
 ```typescript
 interface Agent {
-  id: string                    // Internal DB ID
-  tokenId: number              // On-chain ERC-721 token ID
-  owner: string                // Wallet address
-  name: string
-  description: string
-  endpoint: string
-  pricePerCall: string         // USDC amount (e.g., "0.05")
-  category: string
-  active: boolean
-  logoUrl?: string
-  documentationUrl?: string
-  apiSchema?: object           // OpenAPI schema
+  id: string; // Internal DB ID
+  tokenId: number; // On-chain ERC-721 token ID
+  owner: string; // Wallet address
+  name: string;
+  description: string;
+  endpoint: string;
+  pricePerCall: string; // USDC amount (e.g., "0.05")
+  category: string;
+  active: boolean;
+  logoUrl?: string;
+  documentationUrl?: string;
+  apiSchema?: object; // OpenAPI schema
   stats: {
-    totalCalls: number
-    totalEarned: string        // USDC amount
-    avgResponseTime: number    // ms
-    rating?: number            // 1-5 (post-MVP)
-  }
-  createdAt: string
-  updatedAt: string
+    totalCalls: number;
+    totalEarned: string; // USDC amount
+    avgResponseTime: number; // ms
+    rating?: number; // 1-5 (post-MVP)
+  };
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface MarketplaceAgent {
-  id: string
-  tokenId: number
-  name: string
-  description: string
-  pricePerCall: string
-  category: string
-  owner: string
-  logoUrl?: string
+  id: string;
+  tokenId: number;
+  name: string;
+  description: string;
+  pricePerCall: string;
+  category: string;
+  owner: string;
+  logoUrl?: string;
   stats: {
-    totalCalls: number
-    rating?: number
-  }
+    totalCalls: number;
+    rating?: number;
+  };
 }
 
 interface CallLog {
-  id: string
-  agentId: string
-  callerAddress: string
-  amount: string
-  txHash: string
-  responseTimeMs: number
-  success: boolean
-  createdAt: string
+  id: string;
+  agentId: string;
+  callerAddress: string;
+  amount: string;
+  txHash: string;
+  responseTimeMs: number;
+  success: boolean;
+  createdAt: string;
 }
 
 interface Earnings {
-  total: string               // Total earned (USDC)
-  pending: string             // Pending payout
-  paid: string                // Already paid out
+  total: string; // Total earned (USDC)
+  pending: string; // Pending payout
+  paid: string; // Already paid out
   history: {
-    date: string
-    amount: string
-    type: 'earning' | 'payout'
-    txHash?: string
-  }[]
+    date: string;
+    amount: string;
+    type: 'earning' | 'payout';
+    txHash?: string;
+  }[];
 }
 ```
 
 ### Data Storage Strategy (Hybrid)
 
-| Data | Storage | Reason |
-|------|---------|--------|
-| Agent ownership | On-chain (ERC-721) | Proof of ownership |
-| Agent ID | On-chain | Unique identifier |
-| Price per call | On-chain | x402 reads this |
-| Payment address | On-chain | x402 sends payments here |
-| Name, description | Off-chain (DB) | Frequently updated, searchable |
-| Logo, docs URL | Off-chain (DB) | Large data |
-| API schema | Off-chain (DB) | Complex object |
-| Call logs | Off-chain (DB) | High volume, analytics |
-| Total calls/earned | Both | On-chain = source of truth, DB = cache |
+| Data               | Storage            | Reason                                 |
+| ------------------ | ------------------ | -------------------------------------- |
+| Agent ownership    | On-chain (ERC-721) | Proof of ownership                     |
+| Agent ID           | On-chain           | Unique identifier                      |
+| Price per call     | On-chain           | x402 reads this                        |
+| Payment address    | On-chain           | x402 sends payments here               |
+| Name, description  | Off-chain (DB)     | Frequently updated, searchable         |
+| Logo, docs URL     | Off-chain (DB)     | Large data                             |
+| API schema         | Off-chain (DB)     | Complex object                         |
+| Call logs          | Off-chain (DB)     | High volume, analytics                 |
+| Total calls/earned | Both               | On-chain = source of truth, DB = cache |
 
 ### Backend Tech Stack Options
 
 **Option A: Next.js API Routes (Simplest)**
+
 - Use existing Next.js app
 - API routes in `/app/api/`
 - Good for MVP, may need to split later
 
 **Option B: Separate Express/Fastify Backend**
+
 - Dedicated API server
 - Better separation of concerns
 - Required if x402 middleware needs to call back
 
 **Option C: Supabase + Edge Functions**
+
 - Managed PostgreSQL
 - Built-in auth (can integrate with wallet)
 - Edge functions for custom logic
@@ -1060,22 +1096,22 @@ For data that lives on-chain, use viem directly:
 
 ```typescript
 // lib/contracts/registry.ts
-import { createPublicClient, http } from 'viem'
-import { base } from 'viem/chains'
-import { REGISTRY_ABI, REGISTRY_ADDRESS } from './abi'
+import { createPublicClient, http } from 'viem';
+import { base } from 'viem/chains';
+import { REGISTRY_ABI, REGISTRY_ADDRESS } from './abi';
 
 const client = createPublicClient({
   chain: base,
-  transport: http()
-})
+  transport: http(),
+});
 
 export async function getAgentOnChain(tokenId: number) {
   return client.readContract({
     address: REGISTRY_ADDRESS,
     abi: REGISTRY_ABI,
     functionName: 'agents',
-    args: [BigInt(tokenId)]
-  })
+    args: [BigInt(tokenId)],
+  });
 }
 
 export async function getAgentsByOwner(ownerAddress: string) {
@@ -1083,24 +1119,27 @@ export async function getAgentsByOwner(ownerAddress: string) {
     address: REGISTRY_ADDRESS,
     abi: REGISTRY_ABI,
     functionName: 'getAgentsByOwner',
-    args: [ownerAddress as `0x${string}`]
-  })
+    args: [ownerAddress as `0x${string}`],
+  });
 }
 ```
 
 ### Syncing On-Chain & Off-Chain Data
 
 **Option 1: Event Indexing (Recommended)**
+
 - Listen to `AgentRegistered`, `AgentUpdated`, `CallRecorded` events
 - Update DB when events occur
 - Use services like Alchemy, The Graph, or custom indexer
 
 **Option 2: On-Demand Reads**
+
 - Read from chain when needed
 - Cache in DB
 - Simpler but slower
 
 **Option 3: Hybrid**
+
 - Read from DB for list views (fast)
 - Read from chain for detail views (accurate)
 - Sync periodically

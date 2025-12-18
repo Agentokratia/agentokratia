@@ -31,7 +31,10 @@ interface MarketplaceAgent {
   ownerHandle: string | null;
 }
 
-async function fetchMarketplaceAgents(category: string, sortBy: string): Promise<MarketplaceAgent[]> {
+async function fetchMarketplaceAgents(
+  category: string,
+  sortBy: string
+): Promise<MarketplaceAgent[]> {
   const params = new URLSearchParams();
   if (category !== 'All') params.set('category', category);
   params.set('sort', sortBy);
@@ -48,7 +51,11 @@ export default function MarketplacePage() {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [sortBy, setSortBy] = useState('popular');
 
-  const { data: agents = [], isLoading, error } = useQuery({
+  const {
+    data: agents = [],
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ['marketplace-agents', selectedCategory, sortBy],
     queryFn: () => fetchMarketplaceAgents(selectedCategory, sortBy),
     staleTime: 30_000,
@@ -81,7 +88,8 @@ export default function MarketplacePage() {
           <div className={styles.heroContent}>
             <h1 className={styles.heroTitle}>Agent Marketplace</h1>
             <p className={styles.heroSubtitle}>
-              Discover and use AI agents with pay-per-call pricing. No subscriptions, no commitments.
+              Discover and use AI agents with pay-per-call pricing. No subscriptions, no
+              commitments.
             </p>
             <div className={styles.searchBox}>
               <Search size={20} className={styles.searchIcon} />
@@ -112,7 +120,9 @@ export default function MarketplacePage() {
             </div>
             <div className={styles.sortGroup}>
               <span className={styles.resultsCount}>
-                {isLoading ? 'Loading...' : `${filteredAgents.length} agent${filteredAgents.length !== 1 ? 's' : ''}`}
+                {isLoading
+                  ? 'Loading...'
+                  : `${filteredAgents.length} agent${filteredAgents.length !== 1 ? 's' : ''}`}
               </span>
               <select
                 className={styles.sortSelect}
@@ -136,7 +146,9 @@ export default function MarketplacePage() {
             </div>
           ) : error ? (
             <div className={styles.emptyState}>
-              <p className={styles.errorText}>{error instanceof Error ? error.message : 'Failed to load agents'}</p>
+              <p className={styles.errorText}>
+                {error instanceof Error ? error.message : 'Failed to load agents'}
+              </p>
             </div>
           ) : filteredAgents.length === 0 ? (
             <div className={styles.emptyState}>
@@ -181,9 +193,7 @@ export default function MarketplacePage() {
                       <strong>{formatCalls(agent.totalCalls)}</strong> calls
                     </span>
                     {agent.ownerHandle && (
-                      <span className={styles.cardAuthor}>
-                        @{agent.ownerHandle}
-                      </span>
+                      <span className={styles.cardAuthor}>@{agent.ownerHandle}</span>
                     )}
                   </div>
                 </Link>

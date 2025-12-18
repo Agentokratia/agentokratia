@@ -12,27 +12,19 @@ export async function GET() {
     expiresAt.setMinutes(expiresAt.getMinutes() + 5);
 
     // Store nonce in database
-    const { error } = await supabaseAdmin
-      .from('auth_nonces')
-      .insert({
-        nonce,
-        expires_at: expiresAt.toISOString(),
-      });
+    const { error } = await supabaseAdmin.from('auth_nonces').insert({
+      nonce,
+      expires_at: expiresAt.toISOString(),
+    });
 
     if (error) {
       console.error('Failed to store nonce:', error);
-      return NextResponse.json(
-        { error: 'Failed to generate nonce' },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: 'Failed to generate nonce' }, { status: 500 });
     }
 
     return NextResponse.json({ nonce });
   } catch (error) {
     console.error('Nonce generation error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

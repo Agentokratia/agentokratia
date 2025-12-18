@@ -11,7 +11,7 @@ export interface NetworkConfig {
   identityRegistryAddress: `0x${string}` | null;
   reputationRegistryAddress: `0x${string}` | null;
   blockExplorerUrl: string;
-  deploymentBlock: number | null;  // Block when Identity Registry was deployed
+  deploymentBlock: number | null; // Block when Identity Registry was deployed
   isTestnet: boolean;
   // EIP-712 domain for USDC (required for EIP-3009 signatures)
   usdcEip712Domain: {

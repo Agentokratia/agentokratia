@@ -70,10 +70,7 @@ export async function GET(
     }
 
     if (!userData) {
-      return NextResponse.json(
-        { error: 'Creator not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Creator not found' }, { status: 404 });
     }
 
     const user = userData;
@@ -88,10 +85,7 @@ export async function GET(
 
     if (agentsError) {
       console.error('Error fetching creator agents:', agentsError);
-      return NextResponse.json(
-        { error: 'Failed to fetch agents' },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: 'Failed to fetch agents' }, { status: 500 });
     }
 
     const agents = (agentsData || []) as DbAgent[];
@@ -130,9 +124,6 @@ export async function GET(
     return NextResponse.json({ profile });
   } catch (error) {
     console.error('Creator profile error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

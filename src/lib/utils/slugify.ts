@@ -27,7 +27,18 @@ export function validateHandle(handle: string): { valid: boolean; error?: string
     return { valid: false, error: 'Handle can only contain letters, numbers, and underscores' };
   }
   // Reserved handles
-  const reserved = ['admin', 'api', 'creator', 'dashboard', 'marketplace', 'settings', 'login', 'logout', 'signup', 'auth'];
+  const reserved = [
+    'admin',
+    'api',
+    'creator',
+    'dashboard',
+    'marketplace',
+    'settings',
+    'login',
+    'logout',
+    'signup',
+    'auth',
+  ];
   if (reserved.includes(handle.toLowerCase())) {
     return { valid: false, error: 'This handle is reserved' };
   }

@@ -13,12 +13,7 @@ export const Badge = forwardRef<HTMLSpanElement, BadgeProps>(
     return (
       <span
         ref={ref}
-        className={cn(
-          styles.badge,
-          styles[variant],
-          styles[size],
-          className
-        )}
+        className={cn(styles.badge, styles[variant], styles[size], className)}
         {...props}
       >
         {dot && <span className={styles.dot} />}

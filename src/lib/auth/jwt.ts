@@ -10,10 +10,10 @@ const JWT_AUDIENCE = 'agentokratia-api';
 const JWT_EXPIRATION = '24h';
 
 export interface JWTPayload {
-  sub: string;      // User ID
-  address: string;  // Wallet address
-  iat: number;      // Issued at
-  exp: number;      // Expiration
+  sub: string; // User ID
+  address: string; // Wallet address
+  iat: number; // Issued at
+  exp: number; // Expiration
 }
 
 export async function createToken(userId: string, walletAddress: string): Promise<string> {

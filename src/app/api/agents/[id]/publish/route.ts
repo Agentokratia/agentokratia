@@ -7,10 +7,7 @@ import { buildAgentCard } from '@/lib/erc8004/agentcard';
 // Step 1: Validate agent and prepare AgentCard for on-chain registration
 // Returns the tokenURI that the user will pass to the contract
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const auth = await getAuthenticatedUser(request);
 
@@ -89,9 +86,6 @@ export async function POST(
     });
   } catch (err) {
     console.error('Publish prepare failed:', err);
-    return NextResponse.json(
-      { error: 'Failed to prepare agent for publishing' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to prepare agent for publishing' }, { status: 500 });
   }
 }

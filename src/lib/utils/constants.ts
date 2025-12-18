@@ -7,16 +7,16 @@ export const PLACEHOLDER_ENDPOINT = 'https://placeholder.example.com';
 export const DEFAULT_INPUT_SCHEMA = {
   type: 'object',
   properties: {
-    query: { type: 'string', description: 'The input query' }
+    query: { type: 'string', description: 'The input query' },
   },
-  required: ['query']
+  required: ['query'],
 };
 
 export const DEFAULT_OUTPUT_SCHEMA = {
   type: 'object',
   properties: {
-    result: { type: 'string', description: 'The response' }
-  }
+    result: { type: 'string', description: 'The response' },
+  },
 };
 
 // External links

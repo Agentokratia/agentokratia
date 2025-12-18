@@ -13,7 +13,7 @@ interface Props {
   saving: boolean;
 }
 
-const priceSuggestions = [0.001, 0.01, 0.05, 0.10, 0.50];
+const priceSuggestions = [0.001, 0.01, 0.05, 0.1, 0.5];
 
 export default function PricingTab({ agent, onSave, saving }: Props) {
   // pricePerCall comes from API in cents - store as cents, display with formatUsdc
@@ -85,16 +85,21 @@ export default function PricingTab({ agent, onSave, saving }: Props) {
           <div className={styles.formSectionTitle}>Earnings Preview</div>
 
           {/* 100% Earnings Note */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'flex-start',
-            gap: '12px',
-            padding: '16px',
-            background: 'rgba(34, 197, 94, 0.1)',
-            borderRadius: 'var(--radius-md)',
-            marginBottom: '16px'
-          }}>
-            <CheckCircle size={20} style={{ color: 'var(--success)', flexShrink: 0, marginTop: '2px' }} />
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: '12px',
+              padding: '16px',
+              background: 'rgba(34, 197, 94, 0.1)',
+              borderRadius: 'var(--radius-md)',
+              marginBottom: '16px',
+            }}
+          >
+            <CheckCircle
+              size={20}
+              style={{ color: 'var(--success)', flexShrink: 0, marginTop: '2px' }}
+            />
             <div>
               <p style={{ fontSize: '14px', fontWeight: 600, marginBottom: '4px' }}>
                 You keep 100%
@@ -107,26 +112,52 @@ export default function PricingTab({ agent, onSave, saving }: Props) {
 
           {/* Earnings Preview */}
           {priceCents > 0 && (
-            <div style={{
-              padding: '16px',
-              background: 'var(--cloud)',
-              borderRadius: 'var(--radius-md)'
-            }}>
+            <div
+              style={{
+                padding: '16px',
+                background: 'var(--cloud)',
+                borderRadius: 'var(--radius-md)',
+              }}
+            >
               <p style={{ fontSize: '13px', color: 'var(--stone)', marginBottom: '12px' }}>
                 At {formatUsdc(priceCents)}/call you&apos;d earn:
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'baseline',
+                  }}
+                >
                   <span style={{ fontSize: '13px', color: 'var(--stone)' }}>100 calls</span>
-                  <span style={{ fontSize: '18px', fontWeight: 600 }}>{formatUsdc(calculateEarnings(priceCents, 100))}</span>
+                  <span style={{ fontSize: '18px', fontWeight: 600 }}>
+                    {formatUsdc(calculateEarnings(priceCents, 100))}
+                  </span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'baseline',
+                  }}
+                >
                   <span style={{ fontSize: '13px', color: 'var(--stone)' }}>1,000 calls</span>
-                  <span style={{ fontSize: '18px', fontWeight: 600 }}>{formatUsdc(calculateEarnings(priceCents, 1000))}</span>
+                  <span style={{ fontSize: '18px', fontWeight: 600 }}>
+                    {formatUsdc(calculateEarnings(priceCents, 1000))}
+                  </span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'baseline',
+                  }}
+                >
                   <span style={{ fontSize: '13px', color: 'var(--stone)' }}>10,000 calls</span>
-                  <span style={{ fontSize: '18px', fontWeight: 600 }}>{formatUsdc(calculateEarnings(priceCents, 10000))}</span>
+                  <span style={{ fontSize: '18px', fontWeight: 600 }}>
+                    {formatUsdc(calculateEarnings(priceCents, 10000))}
+                  </span>
                 </div>
               </div>
             </div>

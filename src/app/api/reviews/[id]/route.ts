@@ -19,10 +19,7 @@ interface ReviewContent {
 }
 
 // GET /api/reviews/[id] - Get review content (fileuri endpoint)
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
 
@@ -34,10 +31,7 @@ export async function GET(
       .single();
 
     if (error || !review) {
-      return NextResponse.json(
-        { error: 'Review not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Review not found' }, { status: 404 });
     }
 
     // Return canonical JSON for on-chain filehash verification
@@ -61,9 +55,6 @@ export async function GET(
     });
   } catch (error) {
     console.error('Review content error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

@@ -10,10 +10,10 @@ The review system uses the **existing on-chain IReputationRegistry** contract fo
 
 ## Deployed Contracts
 
-| Network | Chain ID | Identity Registry | Reputation Registry |
-|---------|----------|-------------------|---------------------|
-| Base Sepolia | 84532 | `0xYourIdentityRegistry` | `0xB5048e3ef1DA4E04deB6f7d0423D06F63869e322` |
-| Base Mainnet | 8453 | TBD | TBD |
+| Network      | Chain ID | Identity Registry        | Reputation Registry                          |
+| ------------ | -------- | ------------------------ | -------------------------------------------- |
+| Base Sepolia | 84532    | `0xYourIdentityRegistry` | `0xB5048e3ef1DA4E04deB6f7d0423D06F63869e322` |
+| Base Mainnet | 8453     | TBD                      | TBD                                          |
 
 ---
 
@@ -505,7 +505,7 @@ GROUP BY agent_id;
 ## Score Mapping
 
 | Stars (UI) | Score (On-Chain) |
-|------------|------------------|
+| ---------- | ---------------- |
 | 1 star     | 0-20             |
 | 2 stars    | 21-40            |
 | 3 stars    | 41-60            |
@@ -519,9 +519,11 @@ GROUP BY agent_id;
 ### Agent Publish Flow
 
 #### 1. Generate Feedback Signer
+
 ```
 POST /api/agents/[id]/publish
 ```
+
 **Generates** a new keypair and stores it encrypted. Returns the signer address.
 
 ```json
@@ -532,15 +534,18 @@ POST /api/agents/[id]/publish
 ```
 
 #### 2. Confirm Operator Setup
+
 ```
 POST /api/agents/[id]/publish/confirm-operator
 Body: { "txHash": "0x..." }
 ```
+
 **Called after** owner submits setOperator() transaction.
 
 ### Review Submission Flow
 
 #### 1. Submit Review
+
 ```
 POST /api/marketplace/[id]/reviews
 Body: {
@@ -554,6 +559,7 @@ Body: {
 ```
 
 #### 2. Confirm On-Chain
+
 ```
 POST /api/marketplace/[id]/reviews/[reviewId]/confirm
 Body: { "txHash": "0x...", "feedbackIndex": 1 }
@@ -562,11 +568,13 @@ Body: { "txHash": "0x...", "feedbackIndex": 1 }
 ### Read Reviews
 
 #### Get Agent Reviews
+
 ```
 GET /api/marketplace/[id]/reviews?page=1&limit=10&sort=recent
 ```
 
 #### Get Review Content (fileuri)
+
 ```
 GET /api/reviews/[reviewId]
 ```
@@ -680,14 +688,14 @@ async function signFeedbackAuth(
         data.expiry,
         data.chainId,
         data.identityRegistry,
-        data.signerAddress
+        data.signerAddress,
       ]
     )
   );
 
   // Sign the hash
   const signature = await signer.signMessage({
-    message: { raw: messageHash }
+    message: { raw: messageHash },
   });
 
   // Encode full feedbackAuth (data + signature)
@@ -700,7 +708,7 @@ async function signFeedbackAuth(
       { name: 'chainId', type: 'uint256' },
       { name: 'identityRegistry', type: 'address' },
       { name: 'signerAddress', type: 'address' },
-      { name: 'signature', type: 'bytes' }
+      { name: 'signature', type: 'bytes' },
     ],
     [
       data.agentId,
@@ -710,7 +718,7 @@ async function signFeedbackAuth(
       data.chainId,
       data.identityRegistry,
       data.signerAddress,
-      signature
+      signature,
     ]
   ) as `0x${string}`;
 }
@@ -721,6 +729,7 @@ async function signFeedbackAuth(
 ## Implementation Checklist
 
 ### Phase 1: Database & API Foundation
+
 - [x] Add feedback signer columns to agents table (`20241216000001_agent_feedback_signer.sql`)
 - [x] Create agent_reviews table (`20241216000000_agent_reviews.sql`)
 - [x] Create feedback_auth_tokens table
@@ -728,24 +737,28 @@ async function signFeedbackAuth(
 - [x] Add review types to supabase.ts
 
 ### Phase 2: Publish Flow Integration (Simplified - Same 2 API Calls)
+
 - [x] Update /api/agents/[id]/publish to generate keypair (returns `feedbackSignerAddress`)
 - [x] Update /api/agents/[id]/publish/confirm to accept optional `operatorTxHash`
 - [ ] Add SetOperator UI step in publish modal (after ERC-8004 registration)
 - [ ] Store operator tx confirmation in confirm endpoint
 
 ### Phase 3: Payment Flow Integration
+
 - [x] Add signFeedbackAuth utility function (`src/lib/erc8004/feedbackAuth.ts`)
 - [x] Update payment proxy (`/api/v1/call/[agentId]`) to generate feedbackAuth
 - [x] Add X-Feedback-Auth and X-Feedback-Expires headers to payment responses
 - [x] Store feedbackAuth tokens in database
 
 ### Phase 4: Review Submission
+
 - [x] POST /api/marketplace/[id]/reviews endpoint (validates feedbackAuth)
 - [ ] Create POST /api/marketplace/[id]/reviews/[reviewId]/confirm for on-chain tx
 - [ ] Add ReviewForm component
 - [ ] Integrate on-chain giveFeedback() call in frontend
 
 ### Phase 5: Review Display
+
 - [x] Update marketplace detail page reviews tab (using real data)
 - [ ] Add individual review display with on-chain verification badge
 - [ ] Add owner response display

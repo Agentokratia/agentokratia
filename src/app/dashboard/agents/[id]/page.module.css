@@ -233,8 +233,14 @@
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(4px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .panelHeader {
@@ -737,12 +743,24 @@
 }
 
 /* Syntax highlighting */
-.codeBlockContent .keyword { color: #569cd6; }
-.codeBlockContent .string { color: #ce9178; }
-.codeBlockContent .comment { color: #6a9955; }
-.codeBlockContent .function { color: #dcdcaa; }
-.codeBlockContent .variable { color: #9cdcfe; }
-.codeBlockContent .property { color: #9cdcfe; }
+.codeBlockContent .keyword {
+  color: #569cd6;
+}
+.codeBlockContent .string {
+  color: #ce9178;
+}
+.codeBlockContent .comment {
+  color: #6a9955;
+}
+.codeBlockContent .function {
+  color: #dcdcaa;
+}
+.codeBlockContent .variable {
+  color: #9cdcfe;
+}
+.codeBlockContent .property {
+  color: #9cdcfe;
+}
 
 /* Language Tabs */
 .langTabs {
@@ -958,7 +976,7 @@
 
 .toggleSlider::before {
   position: absolute;
-  content: "";
+  content: '';
   height: 18px;
   width: 18px;
   left: 3px;
@@ -993,8 +1011,12 @@
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Toast */

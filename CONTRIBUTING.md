@@ -32,17 +32,37 @@ Before submitting a bug report:
    ```
 3. Make your changes following our coding standards
 4. Write or update tests if applicable
-5. Run linting and type checking:
+5. Run linting, formatting, and type checking:
    ```bash
    npm run lint
+   npm run format
    npm run type-check
    ```
-6. Commit with clear, descriptive messages
+6. Commit with conventional commit messages (pre-commit hooks will lint and format)
 7. Push and open a pull request
 
 ### Commit Messages
 
-Use clear, descriptive commit messages:
+We use [Conventional Commits](https://www.conventionalcommits.org/). Commits are validated by commitlint.
+
+**Format:** `type: description`
+
+**Types:**
+| Type | Description |
+|------|-------------|
+| `feat` | New feature |
+| `fix` | Bug fix |
+| `docs` | Documentation only |
+| `style` | Formatting, no code change |
+| `refactor` | Code change without fix or feature |
+| `perf` | Performance improvement |
+| `test` | Adding tests |
+| `chore` | Maintenance |
+| `ci` | CI/CD changes |
+| `build` | Build system changes |
+| `revert` | Revert previous commit |
+
+**Examples:**
 
 - `feat: add user profile page`
 - `fix: resolve wallet connection issue on mobile`

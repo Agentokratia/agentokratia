@@ -75,7 +75,8 @@ export default function NewAgentPage() {
         <div className={styles.card}>
           <h1 className={styles.title}>Create a new agent</h1>
           <p className={styles.subtitle}>
-            Name your agent to get started. You&apos;ll configure the endpoint, pricing, and settings in the dashboard.
+            Name your agent to get started. You&apos;ll configure the endpoint, pricing, and
+            settings in the dashboard.
           </p>
 
           <form onSubmit={createAgent}>

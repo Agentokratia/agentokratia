@@ -28,9 +28,7 @@ const footerLinks = [
   },
   {
     title: 'Open Source',
-    links: [
-      { href: EXTERNAL_LINKS.GITHUB, label: 'GitHub', external: true },
-    ],
+    links: [{ href: EXTERNAL_LINKS.GITHUB, label: 'GitHub', external: true }],
   },
 ];
 
@@ -40,9 +38,7 @@ export function Footer() {
       <div className={styles.container}>
         <div className={styles.brand}>
           <span className={styles.logo}>Agentokratia</span>
-          <p className={styles.tagline}>
-            Infrastructure for autonomous AI agents
-          </p>
+          <p className={styles.tagline}>Infrastructure for autonomous AI agents</p>
         </div>
 
         <div className={styles.links}>
@@ -53,7 +49,12 @@ export function Footer() {
                 {section.links.map((link) => (
                   <li key={link.label}>
                     {'external' in link && link.external ? (
-                      <a href={link.href} className={styles.link} target="_blank" rel="noopener noreferrer">
+                      <a
+                        href={link.href}
+                        className={styles.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
                         {link.label}
                       </a>
                     ) : (

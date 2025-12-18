@@ -18,7 +18,9 @@ interface MarketplaceAgent {
   ownerHandle: string | null;
 }
 
-function formatMarketplaceAgent(agent: DbAgent & { users?: { handle: string | null } }): MarketplaceAgent {
+function formatMarketplaceAgent(
+  agent: DbAgent & { users?: { handle: string | null } }
+): MarketplaceAgent {
   return {
     id: agent.id,
     name: agent.name,
@@ -50,8 +52,8 @@ export async function GET(request: NextRequest) {
     if (category && category !== 'All') {
       const categoryMap: Record<string, string> = {
         'AI / ML': 'ai',
-        'Data': 'data',
-        'Content': 'content',
+        Data: 'data',
+        Content: 'content',
         'Dev Tools': 'tools',
       };
       const dbCategory = categoryMap[category] || category.toLowerCase();
@@ -81,10 +83,7 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       console.error('Error fetching marketplace agents:', error);
-      return NextResponse.json(
-        { error: 'Failed to fetch agents' },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: 'Failed to fetch agents' }, { status: 500 });
     }
 
     const agents = (data || []).map(formatMarketplaceAgent);
@@ -92,9 +91,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ agents });
   } catch (error) {
     console.error('Marketplace error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

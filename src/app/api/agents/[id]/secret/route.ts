@@ -4,10 +4,7 @@ import { getAuthenticatedUser } from '@/lib/auth/session';
 import { generateAgentSecret } from '@/lib/crypto';
 
 // GET /api/agents/[id]/secret - Get agent's secret info
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
     const auth = await getAuthenticatedUser(request);
@@ -35,18 +32,12 @@ export async function GET(
     });
   } catch (error) {
     console.error('Get secret error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
 // POST /api/agents/[id]/secret - Generate a new secret
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
     const auth = await getAuthenticatedUser(request);
@@ -80,10 +71,7 @@ export async function POST(
 
     if (error) {
       console.error('Error storing secret:', error);
-      return NextResponse.json(
-        { error: 'Failed to generate secret' },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: 'Failed to generate secret' }, { status: 500 });
     }
 
     return NextResponse.json({
@@ -92,10 +80,7 @@ export async function POST(
     });
   } catch (error) {
     console.error('Generate secret error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
@@ -134,18 +119,12 @@ export async function DELETE(
 
     if (error) {
       console.error('Error deleting secret:', error);
-      return NextResponse.json(
-        { error: 'Failed to delete secret' },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: 'Failed to delete secret' }, { status: 500 });
     }
 
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Delete secret error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
