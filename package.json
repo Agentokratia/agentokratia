@@ -25,8 +25,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
-    "lint:fix": "next lint --fix",
+    "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "type-check": "tsc --noEmit",
@@ -65,6 +65,8 @@
   "devDependencies": {
     "@commitlint/cli": "^20.2.0",
     "@commitlint/config-conventional": "^20.2.0",
+    "@eslint/eslintrc": "^3.3.3",
+    "@eslint/js": "^9.39.2",
     "@types/node": "^20.16.10",
     "@types/react": "^18.3.10",
     "@types/react-dom": "^18.3.0",
@@ -75,10 +77,12 @@
     "null-loader": "^4.0.1",
     "prettier": "^3.7.4",
     "supabase": "^2.65.8",
-    "typescript": "^5.6.2"
+    "typescript": "^5.6.2",
+    "typescript-eslint": "^8.50.0"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [
+      "eslint --fix",
       "prettier --write"
     ],
     "*.{json,md,css}": [
