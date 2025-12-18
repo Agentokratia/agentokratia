@@ -36,10 +36,7 @@ export async function GET(request: NextRequest) {
   try {
     const auth = await getAuthenticatedUser(request);
     if (!auth) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { data: userData, error } = await supabaseAdmin
@@ -49,10 +46,7 @@ export async function GET(request: NextRequest) {
       .single();
 
     if (error || !userData) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
     const user = userData as DbUser;
@@ -71,10 +65,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Get profile error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
@@ -82,10 +73,7 @@ export async function PUT(request: NextRequest) {
   try {
     const auth = await getAuthenticatedUser(request);
     if (!auth) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const body = await request.json();
@@ -110,10 +98,7 @@ export async function PUT(request: NextRequest) {
           .single();
 
         if (existingUser) {
-          return NextResponse.json(
-            { error: 'Handle is already taken' },
-            { status: 409 }
-          );
+          return NextResponse.json({ error: 'Handle is already taken' }, { status: 409 });
         }
       }
     }
@@ -122,10 +107,7 @@ export async function PUT(request: NextRequest) {
     if (email !== undefined && email) {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email)) {
-        return NextResponse.json(
-          { error: 'Invalid email format' },
-          { status: 400 }
-        );
+        return NextResponse.json({ error: 'Invalid email format' }, { status: 400 });
       }
     }
 
@@ -137,10 +119,7 @@ export async function PUT(request: NextRequest) {
     if (bio !== undefined) updates.bio = bio || null;
 
     if (Object.keys(updates).length === 0) {
-      return NextResponse.json(
-        { error: 'No fields to update' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'No fields to update' }, { status: 400 });
     }
 
     const { data: updatedUserData, error } = await supabaseAdmin
@@ -152,10 +131,7 @@ export async function PUT(request: NextRequest) {
 
     if (error || !updatedUserData) {
       console.error('Update profile error:', error);
-      return NextResponse.json(
-        { error: 'Failed to update profile' },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: 'Failed to update profile' }, { status: 500 });
     }
 
     const updatedUser = updatedUserData as DbUser;
@@ -174,9 +150,6 @@ export async function PUT(request: NextRequest) {
     });
   } catch (error) {
     console.error('Update profile error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

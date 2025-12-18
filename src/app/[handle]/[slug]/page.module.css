@@ -31,7 +31,9 @@
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Two Column Container - Apify Style (Full Width) */

@@ -111,7 +111,7 @@ export function FeedbackWidget({ placement = 'right' }: FeedbackWidgetProps) {
                     category === 'bug'
                       ? "What's broken? Please describe the issue..."
                       : category === 'feature'
-                        ? "What would make this better? Describe your idea..."
+                        ? 'What would make this better? Describe your idea...'
                         : "What's on your mind?"
                   }
                   className={styles.textarea}

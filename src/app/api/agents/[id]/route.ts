@@ -38,10 +38,7 @@ function formatAgent(agent: DbAgent & { users?: { handle: string | null } }, own
 }
 
 // GET /api/agents/[id] - Get a single agent
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
     const auth = await getAuthenticatedUser(request);
@@ -60,21 +57,17 @@ export async function GET(
       return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
     }
 
-    return NextResponse.json({ agent: formatAgent(data as DbAgent & { users?: { handle: string | null } }) });
+    return NextResponse.json({
+      agent: formatAgent(data as DbAgent & { users?: { handle: string | null } }),
+    });
   } catch (error) {
     console.error('Get agent error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
 // PUT /api/agents/[id] - Update an agent
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
     const auth = await getAuthenticatedUser(request);
@@ -110,17 +103,25 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const { name, description, category, endpointUrl, timeoutMs, pricePerCall, status, inputSchema, outputSchema, readme } = body;
+    const {
+      name,
+      description,
+      category,
+      endpointUrl,
+      timeoutMs,
+      pricePerCall,
+      status,
+      inputSchema,
+      outputSchema,
+      readme,
+    } = body;
 
     // Build update object
     const updates: Record<string, unknown> = {};
 
     if (name !== undefined) {
       if (typeof name !== 'string' || name.length < 2 || name.length > 100) {
-        return NextResponse.json(
-          { error: 'Name must be 2-100 characters' },
-          { status: 400 }
-        );
+        return NextResponse.json({ error: 'Name must be 2-100 characters' }, { status: 400 });
       }
       updates.name = name.trim();
     }
@@ -132,10 +133,7 @@ export async function PUT(
     if (category !== undefined) {
       const validCategories: AgentCategory[] = ['ai', 'data', 'content', 'tools', 'other'];
       if (!validCategories.includes(category)) {
-        return NextResponse.json(
-          { error: 'Invalid category' },
-          { status: 400 }
-        );
+        return NextResponse.json({ error: 'Invalid category' }, { status: 400 });
       }
       updates.category = category;
     }
@@ -144,10 +142,7 @@ export async function PUT(
       try {
         new URL(endpointUrl);
       } catch {
-        return NextResponse.json(
-          { error: 'Invalid endpoint URL format' },
-          { status: 400 }
-        );
+        return NextResponse.json({ error: 'Invalid endpoint URL format' }, { status: 400 });
       }
       updates.endpoint_url = endpointUrl.trim();
     }
@@ -176,10 +171,7 @@ export async function PUT(
     if (status !== undefined) {
       const validStatuses: AgentStatus[] = ['draft', 'pending', 'live', 'paused', 'rejected'];
       if (!validStatuses.includes(status)) {
-        return NextResponse.json(
-          { error: 'Invalid status' },
-          { status: 400 }
-        );
+        return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
       }
       updates.status = status;
 
@@ -195,10 +187,7 @@ export async function PUT(
         try {
           updates.input_schema = JSON.parse(inputSchema);
         } catch {
-          return NextResponse.json(
-            { error: 'Invalid input schema JSON' },
-            { status: 400 }
-          );
+          return NextResponse.json({ error: 'Invalid input schema JSON' }, { status: 400 });
         }
       } else {
         updates.input_schema = inputSchema;
@@ -211,10 +200,7 @@ export async function PUT(
         try {
           updates.output_schema = JSON.parse(outputSchema);
         } catch {
-          return NextResponse.json(
-            { error: 'Invalid output schema JSON' },
-            { status: 400 }
-          );
+          return NextResponse.json({ error: 'Invalid output schema JSON' }, { status: 400 });
         }
       } else {
         updates.output_schema = outputSchema;
@@ -226,10 +212,7 @@ export async function PUT(
     }
 
     if (Object.keys(updates).length === 0) {
-      return NextResponse.json(
-        { error: 'No fields to update' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'No fields to update' }, { status: 400 });
     }
 
     const { data: updatedAgent, error } = await supabaseAdmin
@@ -241,19 +224,15 @@ export async function PUT(
 
     if (error) {
       console.error('Error updating agent:', error);
-      return NextResponse.json(
-        { error: 'Failed to update agent' },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: 'Failed to update agent' }, { status: 500 });
     }
 
-    return NextResponse.json({ agent: formatAgent(updatedAgent as DbAgent & { users?: { handle: string | null } }) });
+    return NextResponse.json({
+      agent: formatAgent(updatedAgent as DbAgent & { users?: { handle: string | null } }),
+    });
   } catch (error) {
     console.error('Update agent error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
@@ -296,25 +275,16 @@ export async function DELETE(
       }
     }
 
-    const { error } = await supabaseAdmin
-      .from('agents')
-      .delete()
-      .eq('id', id);
+    const { error } = await supabaseAdmin.from('agents').delete().eq('id', id);
 
     if (error) {
       console.error('Error deleting agent:', error);
-      return NextResponse.json(
-        { error: 'Failed to delete agent' },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: 'Failed to delete agent' }, { status: 500 });
     }
 
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Delete agent error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

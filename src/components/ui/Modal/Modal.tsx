@@ -36,9 +36,7 @@ export function Modal({
             </VisuallyHidden.Root>
           )}
           {description && (
-            <Dialog.Description className={styles.description}>
-              {description}
-            </Dialog.Description>
+            <Dialog.Description className={styles.description}>{description}</Dialog.Description>
           )}
           <div className={styles.body}>{children}</div>
           <Dialog.Close asChild>

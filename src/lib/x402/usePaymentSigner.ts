@@ -38,42 +38,45 @@ export function usePaymentSigner(): UsePaymentSignerResult {
   const { data: walletClient } = useWalletClient();
   const chainId = useChainId();
 
-  const signPayment = useCallback(async (paymentRequired: PaymentRequired): Promise<PaymentPayload> => {
-    if (!address || !walletClient) {
-      throw new Error('Wallet not connected');
-    }
+  const signPayment = useCallback(
+    async (paymentRequired: PaymentRequired): Promise<PaymentPayload> => {
+      if (!address || !walletClient) {
+        throw new Error('Wallet not connected');
+      }
 
-    // Get the first accepted payment scheme
-    const requirements = paymentRequired.accepts[0];
-    if (!requirements) {
-      throw new Error('No payment requirements found');
-    }
+      // Get the first accepted payment scheme
+      const requirements = paymentRequired.accepts[0];
+      if (!requirements) {
+        throw new Error('No payment requirements found');
+      }
 
-    // Validate we support this network
-    const expectedNetwork = `eip155:${chainId}`;
-    if (requirements.network !== expectedNetwork) {
-      throw new Error(`Wrong network. Expected ${requirements.network}, got ${expectedNetwork}`);
-    }
+      // Validate we support this network
+      const expectedNetwork = `eip155:${chainId}`;
+      if (requirements.network !== expectedNetwork) {
+        throw new Error(`Wrong network. Expected ${requirements.network}, got ${expectedNetwork}`);
+      }
 
-    // Create the EVM signer adapter
-    const signer = createClientEvmSigner(walletClient);
+      // Create the EVM signer adapter
+      const signer = createClientEvmSigner(walletClient);
 
-    // Create payment payload using the official scheme
-    const scheme = new ExactEvmScheme(signer);
-    const partialPayload = await scheme.createPaymentPayload(
-      paymentRequired.x402Version,
-      requirements
-    );
+      // Create payment payload using the official scheme
+      const scheme = new ExactEvmScheme(signer);
+      const partialPayload = await scheme.createPaymentPayload(
+        paymentRequired.x402Version,
+        requirements
+      );
 
-    // Construct full PaymentPayload
-    const paymentPayload: PaymentPayload = {
-      ...partialPayload,
-      resource: paymentRequired.resource,
-      accepted: requirements,
-    };
+      // Construct full PaymentPayload
+      const paymentPayload: PaymentPayload = {
+        ...partialPayload,
+        resource: paymentRequired.resource,
+        accepted: requirements,
+      };
 
-    return paymentPayload;
-  }, [address, walletClient, chainId]);
+      return paymentPayload;
+    },
+    [address, walletClient, chainId]
+  );
 
   return {
     signPayment,

@@ -68,7 +68,9 @@
   border-radius: var(--radius-sm);
   color: var(--stone);
   cursor: pointer;
-  transition: background 0.2s ease, color 0.2s ease;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease;
 }
 
 .close:hover {

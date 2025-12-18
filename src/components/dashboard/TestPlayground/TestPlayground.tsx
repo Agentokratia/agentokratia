@@ -37,13 +37,19 @@ interface TestPlaygroundProps {
 type PlaygroundTab = 'params' | 'headers' | 'request';
 type ResponseTab = 'body' | 'headers';
 
-export const TestPlayground = memo(function TestPlayground({ endpointUrl, inputFields, secretKey }: TestPlaygroundProps) {
+export const TestPlayground = memo(function TestPlayground({
+  endpointUrl,
+  inputFields,
+  secretKey,
+}: TestPlaygroundProps) {
   const { token } = useAuthStore();
 
   // Playground state
   const [activeTab, setActiveTab] = useState<PlaygroundTab>('params');
   const [responseTab, setResponseTab] = useState<ResponseTab>('body');
-  const [paramValues, setParamValues] = useState<Record<string, string | number | boolean | undefined>>({});
+  const [paramValues, setParamValues] = useState<
+    Record<string, string | number | boolean | undefined>
+  >({});
   const [customHeaders, setCustomHeaders] = useState<Array<{ key: string; value: string }>>([]);
   const [visibleSecrets, setVisibleSecrets] = useState<Set<number>>(new Set());
   const [testing, setTesting] = useState(false);
@@ -51,7 +57,11 @@ export const TestPlayground = memo(function TestPlayground({ endpointUrl, inputF
   const [responseHeaders, setResponseHeaders] = useState<Record<string, string>>({});
   const [responseTime, setResponseTime] = useState<number | null>(null);
   const [responseSize, setResponseSize] = useState<string>('');
-  const [httpStatus, setHttpStatus] = useState<{ code: number; text: string; success: boolean } | null>(null);
+  const [httpStatus, setHttpStatus] = useState<{
+    code: number;
+    text: string;
+    success: boolean;
+  } | null>(null);
   const [copied, setCopied] = useState(false);
 
   // Custom header management
@@ -64,9 +74,7 @@ export const TestPlayground = memo(function TestPlayground({ endpointUrl, inputF
   };
 
   const updateCustomHeader = (index: number, field: 'key' | 'value', val: string) => {
-    setCustomHeaders((prev) =>
-      prev.map((h, i) => (i === index ? { ...h, [field]: val } : h))
-    );
+    setCustomHeaders((prev) => prev.map((h, i) => (i === index ? { ...h, [field]: val } : h)));
   };
 
   const toggleSecretVisibility = (index: number) => {
@@ -82,11 +90,11 @@ export const TestPlayground = memo(function TestPlayground({ endpointUrl, inputF
   };
 
   // Parse fields with names only - use stable reference
-  const validFields = useMemo(() => inputFields.filter(f => f.name), [inputFields]);
+  const validFields = useMemo(() => inputFields.filter((f) => f.name), [inputFields]);
 
   // Stable string representation for dependency tracking
-  const fieldsKey = useMemo(() =>
-    validFields.map(f => `${f.name}:${f.type}:${f.required}`).join('|'),
+  const fieldsKey = useMemo(
+    () => validFields.map((f) => `${f.name}:${f.type}:${f.required}`).join('|'),
     [validFields]
   );
 
@@ -94,7 +102,9 @@ export const TestPlayground = memo(function TestPlayground({ endpointUrl, inputF
   const mountedRef = useRef(true);
   useEffect(() => {
     mountedRef.current = true;
-    return () => { mountedRef.current = false; };
+    return () => {
+      mountedRef.current = false;
+    };
   }, []);
 
   // Initialize param values from fields
@@ -128,14 +138,12 @@ export const TestPlayground = memo(function TestPlayground({ endpointUrl, inputF
   useEffect(() => {
     if (!secretKey) return;
 
-    setCustomHeaders(prev => {
+    setCustomHeaders((prev) => {
       // Check if header already exists
-      const existingIndex = prev.findIndex(h => h.key === 'X-Agentokratia-Secret');
+      const existingIndex = prev.findIndex((h) => h.key === 'X-Agentokratia-Secret');
       if (existingIndex >= 0) {
         // Update existing header value
-        return prev.map((h, i) =>
-          i === existingIndex ? { ...h, value: secretKey } : h
-        );
+        return prev.map((h, i) => (i === existingIndex ? { ...h, value: secretKey } : h));
       }
       // Add new header
       return [{ key: 'X-Agentokratia-Secret', value: secretKey }, ...prev];
@@ -195,7 +203,7 @@ export const TestPlayground = memo(function TestPlayground({ endpointUrl, inputF
 
     // Build payload
     const payload: Record<string, unknown> = {};
-    validFields.forEach(field => {
+    validFields.forEach((field) => {
       const value = paramValues[field.name];
       if (value === undefined || value === '') return;
 
@@ -208,7 +216,7 @@ export const TestPlayground = memo(function TestPlayground({ endpointUrl, inputF
           try {
             payload[field.name] = JSON.parse(value);
           } catch {
-            payload[field.name] = value.split(',').map(s => s.trim());
+            payload[field.name] = value.split(',').map((s) => s.trim());
           }
         } else {
           payload[field.name] = value;
@@ -220,7 +228,7 @@ export const TestPlayground = memo(function TestPlayground({ endpointUrl, inputF
 
     // Build custom headers object
     const headers: Record<string, string> = {};
-    customHeaders.forEach(h => {
+    customHeaders.forEach((h) => {
       if (h.key && h.value) {
         headers[h.key] = h.value;
       }
@@ -254,13 +262,14 @@ export const TestPlayground = memo(function TestPlayground({ endpointUrl, inputF
         setHttpStatus({
           code: data.status,
           text: data.statusText,
-          success: data.success
+          success: data.success,
         });
 
         if (data.response !== null && data.response !== undefined) {
-          const responseStr = typeof data.response === 'string'
-            ? data.response
-            : JSON.stringify(data.response, null, 2);
+          const responseStr =
+            typeof data.response === 'string'
+              ? data.response
+              : JSON.stringify(data.response, null, 2);
           setResponse(responseStr);
           setResponseSize(`${(new Blob([responseStr]).size / 1024).toFixed(1)} KB`);
         } else {
@@ -285,9 +294,15 @@ export const TestPlayground = memo(function TestPlayground({ endpointUrl, inputF
       if (!mountedRef.current) return;
 
       setHttpStatus({ code: 0, text: 'Error', success: false });
-      setResponse(JSON.stringify({
-        error: err instanceof Error ? err.message : 'Test failed'
-      }, null, 2));
+      setResponse(
+        JSON.stringify(
+          {
+            error: err instanceof Error ? err.message : 'Test failed',
+          },
+          null,
+          2
+        )
+      );
     } finally {
       if (mountedRef.current) {
         setTesting(false);
@@ -300,7 +315,6 @@ export const TestPlayground = memo(function TestPlayground({ endpointUrl, inputF
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
-
 
   return (
     <div className={styles.playground}>
@@ -367,30 +381,37 @@ export const TestPlayground = memo(function TestPlayground({ endpointUrl, inputF
                       <select
                         className={styles.paramSelect}
                         value={String(paramValues[field.name] ?? '')}
-                        onChange={(e) => setParamValues((prev) => ({
-                          ...prev,
-                          [field.name]: e.target.value || undefined
-                        }))}
+                        onChange={(e) =>
+                          setParamValues((prev) => ({
+                            ...prev,
+                            [field.name]: e.target.value || undefined,
+                          }))
+                        }
                       >
-                        {!field.required && (
-                          <option value="">Select {field.name}...</option>
-                        )}
+                        {!field.required && <option value="">Select {field.name}...</option>}
                         {field.enumValues.map((opt) => (
-                          <option key={opt} value={opt}>{opt}</option>
+                          <option key={opt} value={opt}>
+                            {opt}
+                          </option>
                         ))}
                       </select>
                     ) : field.type === 'boolean' ? (
                       <select
                         className={styles.paramSelect}
-                        value={paramValues[field.name] === undefined ? '' : String(paramValues[field.name])}
-                        onChange={(e) => setParamValues((prev) => ({
-                          ...prev,
-                          [field.name]: e.target.value === '' ? undefined : e.target.value === 'true'
-                        }))}
+                        value={
+                          paramValues[field.name] === undefined
+                            ? ''
+                            : String(paramValues[field.name])
+                        }
+                        onChange={(e) =>
+                          setParamValues((prev) => ({
+                            ...prev,
+                            [field.name]:
+                              e.target.value === '' ? undefined : e.target.value === 'true',
+                          }))
+                        }
                       >
-                        {!field.required && (
-                          <option value="">Select...</option>
-                        )}
+                        {!field.required && <option value="">Select...</option>}
                         <option value="false">false</option>
                         <option value="true">true</option>
                       </select>
@@ -399,13 +420,17 @@ export const TestPlayground = memo(function TestPlayground({ endpointUrl, inputF
                         type="number"
                         className={styles.paramInput}
                         placeholder={field.required ? `Enter ${field.name}` : 'Optional'}
-                        value={typeof paramValues[field.name] === 'number' ? (paramValues[field.name] as number) : ''}
+                        value={
+                          typeof paramValues[field.name] === 'number'
+                            ? (paramValues[field.name] as number)
+                            : ''
+                        }
                         onChange={(e) => {
                           const val = e.target.value;
                           const parsed = val === '' ? undefined : parseInt(val, 10);
                           setParamValues((prev) => ({
                             ...prev,
-                            [field.name]: Number.isNaN(parsed) ? undefined : parsed
+                            [field.name]: Number.isNaN(parsed) ? undefined : parsed,
                           }));
                         }}
                       />
@@ -414,16 +439,24 @@ export const TestPlayground = memo(function TestPlayground({ endpointUrl, inputF
                         type="text"
                         className={styles.paramInput}
                         placeholder='["item1", "item2"] or item1, item2'
-                        value={typeof paramValues[field.name] === 'string' ? (paramValues[field.name] as string) : ''}
-                        onChange={(e) => setParamValues((prev) => ({ ...prev, [field.name]: e.target.value }))}
+                        value={
+                          typeof paramValues[field.name] === 'string'
+                            ? (paramValues[field.name] as string)
+                            : ''
+                        }
+                        onChange={(e) =>
+                          setParamValues((prev) => ({ ...prev, [field.name]: e.target.value }))
+                        }
                       />
                     ) : (
                       <input
                         type="text"
                         className={styles.paramInput}
                         placeholder={field.description || `Enter ${field.name}...`}
-                        value={paramValues[field.name] as string || ''}
-                        onChange={(e) => setParamValues((prev) => ({ ...prev, [field.name]: e.target.value }))}
+                        value={(paramValues[field.name] as string) || ''}
+                        onChange={(e) =>
+                          setParamValues((prev) => ({ ...prev, [field.name]: e.target.value }))
+                        }
                       />
                     )}
                     {field.description && (
@@ -546,9 +579,7 @@ export const TestPlayground = memo(function TestPlayground({ endpointUrl, inputF
             </>
           )}
         </Button>
-        {!endpointUrl && (
-          <span className={styles.hint}>Enter a backend URL first</span>
-        )}
+        {!endpointUrl && <span className={styles.hint}>Enter a backend URL first</span>}
       </div>
 
       {/* Response panel */}
@@ -569,7 +600,9 @@ export const TestPlayground = memo(function TestPlayground({ endpointUrl, inputF
             </button>
           </div>
           <div className={styles.responseStatusBar}>
-            <span className={`${styles.statusCode} ${httpStatus.success ? styles.success : styles.error}`}>
+            <span
+              className={`${styles.statusCode} ${httpStatus.success ? styles.success : styles.error}`}
+            >
               {httpStatus.code ? formatHttpStatus(httpStatus.code) : httpStatus.text}
             </span>
             {responseTime && (
@@ -583,11 +616,15 @@ export const TestPlayground = memo(function TestPlayground({ endpointUrl, inputF
               </span>
             )}
           </div>
-          <pre className={styles.responseBody} dangerouslySetInnerHTML={{
-            __html: responseTab === 'body'
-              ? highlightJson(response)
-              : highlightHeaders(responseHeaders)
-          }} />
+          <pre
+            className={styles.responseBody}
+            dangerouslySetInnerHTML={{
+              __html:
+                responseTab === 'body'
+                  ? highlightJson(response)
+                  : highlightHeaders(responseHeaders),
+            }}
+          />
         </div>
       )}
     </div>

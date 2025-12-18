@@ -73,7 +73,10 @@ interface SecretKeyInfo {
   createdAt: string | null;
 }
 
-const statusConfig: Record<string, { label: string; variant: 'success' | 'warning' | 'error' | 'default' }> = {
+const statusConfig: Record<
+  string,
+  { label: string; variant: 'success' | 'warning' | 'error' | 'default' }
+> = {
   live: { label: 'Live', variant: 'success' },
   draft: { label: 'Draft', variant: 'warning' },
   pending: { label: 'Pending', variant: 'default' },
@@ -110,7 +113,11 @@ async function fetchSecretKey(id: string, token: string): Promise<SecretKeyInfo>
   return res.json();
 }
 
-async function updateAgentApi(id: string, token: string, updates: Record<string, unknown>): Promise<Agent> {
+async function updateAgentApi(
+  id: string,
+  token: string,
+  updates: Record<string, unknown>
+): Promise<Agent> {
   const res = await fetch(`/api/agents/${id}`, {
     method: 'PUT',
     headers: {
@@ -141,7 +148,12 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
   const [showEnableReviewsModal, setShowEnableReviewsModal] = useState(false);
 
   // Fetch agent data
-  const { data: agent, isLoading, error, refetch: refetchAgent } = useQuery({
+  const {
+    data: agent,
+    isLoading,
+    error,
+    refetch: refetchAgent,
+  } = useQuery({
     queryKey: ['agent', id, token],
     queryFn: () => fetchAgent(id, token!),
     enabled: !!token,
@@ -169,17 +181,16 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
     },
   });
 
-  
   // Check on-chain if reviews are enabled (via isApprovedForAll)
-  const { reviewsEnabled, isLoading: isCheckingReviews, refetch: refetchReviews } = useReviewsEnabled(
-    address,
-    agent?.feedbackSignerAddress,
-    agent?.erc8004ChainId
-  );
+  const {
+    reviewsEnabled,
+    isLoading: isCheckingReviews,
+    refetch: refetchReviews,
+  } = useReviewsEnabled(address, agent?.feedbackSignerAddress, agent?.erc8004ChainId);
 
   useEffect(() => {
     const tab = searchParams.get('tab') as Tab | null;
-    if (tab && tabs.some(t => t.id === tab)) {
+    if (tab && tabs.some((t) => t.id === tab)) {
       setActiveTab(tab);
     }
   }, [searchParams]);
@@ -200,14 +211,18 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
 
   const handlePublished = async (tokenId: string, txHash: string, chainId: number) => {
     // Update cache optimistically with the new on-chain data
-    queryClient.setQueryData(['agent', id, token], (prev: Agent | undefined) => prev ? {
-      ...prev,
-      status: 'live',
-      publishedAt: new Date().toISOString(),
-      erc8004TokenId: tokenId,
-      erc8004TxHash: txHash,
-      erc8004ChainId: chainId,
-    } : undefined);
+    queryClient.setQueryData(['agent', id, token], (prev: Agent | undefined) =>
+      prev
+        ? {
+            ...prev,
+            status: 'live',
+            publishedAt: new Date().toISOString(),
+            erc8004TokenId: tokenId,
+            erc8004TxHash: txHash,
+            erc8004ChainId: chainId,
+          }
+        : undefined
+    );
     queryClient.invalidateQueries({ queryKey: ['agents'] });
     showToast('Agent published successfully!');
     // Refetch to get the complete updated state from server
@@ -227,7 +242,9 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
 
   const copyAgentUrl = async () => {
     if (agent?.ownerHandle && agent?.slug) {
-      await navigator.clipboard.writeText(`${window.location.origin}/api/v1/call/${agent.ownerHandle}/${agent.slug}`);
+      await navigator.clipboard.writeText(
+        `${window.location.origin}/api/v1/call/${agent.ownerHandle}/${agent.slug}`
+      );
       showToast('URL copied!');
     }
   };
@@ -243,7 +260,9 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
       case 'profile':
         return agent.name ? 'done' : 'needs-setup';
       case 'connection':
-        return agent.endpointUrl && agent.endpointUrl !== 'https://placeholder.example.com' ? 'done' : 'needs-setup';
+        return agent.endpointUrl && agent.endpointUrl !== 'https://placeholder.example.com'
+          ? 'done'
+          : 'needs-setup';
       case 'pricing':
         return 'done';
       case 'readme':
@@ -252,7 +271,12 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
         return secretKey?.hasKey ? 'done' : 'needs-setup';
       case 'reviews':
         // Show highlight indicator when published but reviews not enabled
-        if (agent.status === 'live' && agent.erc8004TokenId && !reviewsEnabled && !isCheckingReviews) {
+        if (
+          agent.status === 'live' &&
+          agent.erc8004TokenId &&
+          !reviewsEnabled &&
+          !isCheckingReviews
+        ) {
           return 'highlight';
         }
         return reviewsEnabled ? 'done' : '';
@@ -304,7 +328,14 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
             </div>
           </div>
           <div className={styles.headerActions}>
-            <button className={styles.previewLink} onClick={() => agent?.ownerHandle && agent?.slug && window.open(`/${agent.ownerHandle}/${agent.slug}`, '_blank')}>
+            <button
+              className={styles.previewLink}
+              onClick={() =>
+                agent?.ownerHandle &&
+                agent?.slug &&
+                window.open(`/${agent.ownerHandle}/${agent.slug}`, '_blank')
+              }
+            >
               <ExternalLink size={16} />
               Preview
             </button>
@@ -331,11 +362,16 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
           <div className={styles.statsBar}>
             {agent.erc8004TokenId && (
               <a
-                href={getExplorerUrlForChain(networks, agent.erc8004ChainId, agent.erc8004TxHash) || '#'}
+                href={
+                  getExplorerUrlForChain(networks, agent.erc8004ChainId, agent.erc8004TxHash) || '#'
+                }
                 target="_blank"
                 rel="noopener noreferrer"
                 className={styles.stat}
-                style={{ textDecoration: 'none', cursor: agent.erc8004TxHash ? 'pointer' : 'default' }}
+                style={{
+                  textDecoration: 'none',
+                  cursor: agent.erc8004TxHash ? 'pointer' : 'default',
+                }}
               >
                 <Check size={16} style={{ color: 'var(--green-500)' }} />
                 <span className={styles.statValue}>#{agent.erc8004TokenId}</span>
@@ -366,10 +402,14 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
               <ShieldCheck size={16} />
               <div className={styles.trustSignalContent}>
                 <span className={styles.trustSignalTitle}>On-chain Verified</span>
-                <span className={styles.trustSignalDesc}>Ownership & payments secured by blockchain</span>
+                <span className={styles.trustSignalDesc}>
+                  Ownership & payments secured by blockchain
+                </span>
               </div>
             </div>
-            <div className={`${styles.trustSignal} ${reviewsEnabled ? styles.trustSignalActive : styles.trustSignalInactive}`}>
+            <div
+              className={`${styles.trustSignal} ${reviewsEnabled ? styles.trustSignalActive : styles.trustSignalInactive}`}
+            >
               <MessageSquare size={16} />
               <div className={styles.trustSignalContent}>
                 <span className={styles.trustSignalTitle}>
@@ -395,7 +435,6 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
             </div>
           </div>
         )}
-
       </header>
 
       {/* Tabs */}
@@ -429,7 +468,12 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
 
         {/* Connection Tab */}
         {activeTab === 'connection' && (
-          <ConnectionTab agent={agent} onSave={updateAgent} saving={saving} secretKey={secretKey?.secret ?? null} />
+          <ConnectionTab
+            agent={agent}
+            onSave={updateAgent}
+            saving={saving}
+            secretKey={secretKey?.secret ?? null}
+          />
         )}
 
         {/* Pricing Tab */}
@@ -438,20 +482,18 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
         )}
 
         {/* README Tab */}
-        {activeTab === 'readme' && (
-          <ReadmeTab agent={agent} onSave={updateAgent} saving={saving} />
-        )}
+        {activeTab === 'readme' && <ReadmeTab agent={agent} onSave={updateAgent} saving={saving} />}
 
         {/* Security Tab */}
-        {activeTab === 'security' && (
-          <SecurityTab agent={agent} onToast={showToast} />
-        )}
+        {activeTab === 'security' && <SecurityTab agent={agent} onToast={showToast} />}
 
         {/* Reviews Tab */}
         {activeTab === 'reviews' && (
           <ReviewsTab
             agent={agent}
-            blockExplorerUrl={networks?.find(n => n.chainId === agent.erc8004ChainId)?.blockExplorerUrl}
+            blockExplorerUrl={
+              networks?.find((n) => n.chainId === agent.erc8004ChainId)?.blockExplorerUrl
+            }
             reviewsEnabled={reviewsEnabled}
             isCheckingReviews={isCheckingReviews}
             onEnableReviews={() => setShowEnableReviewsModal(true)}

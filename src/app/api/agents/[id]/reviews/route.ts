@@ -2,10 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '@/lib/auth/session';
 import { supabaseAdmin, DbAgentReview } from '@/lib/db/supabase';
 import { shortenAddress } from '@/lib/utils/format';
-import {
-  generateFeedbackSignerKeypair,
-  encryptPrivateKey,
-} from '@/lib/erc8004/feedbackAuth';
+import { generateFeedbackSignerKeypair, encryptPrivateKey } from '@/lib/erc8004/feedbackAuth';
 
 // Convert score (0-100) to stars (1-5)
 function scoreToStars(score: number): number {
@@ -35,10 +32,7 @@ interface ReviewResponse {
 }
 
 // GET /api/agents/[id]/reviews - Get reviews for agent owner
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const auth = await getAuthenticatedUser(request);
     if (!auth) {
@@ -100,24 +94,27 @@ export async function GET(
 
     if (reviewsError) {
       console.error('Error fetching reviews:', reviewsError);
-      return NextResponse.json(
-        { error: 'Failed to fetch reviews' },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: 'Failed to fetch reviews' }, { status: 500 });
     }
 
     // Fetch user handles for reviewer addresses
-    const reviewerAddresses = [...new Set((reviewsData || []).map((r: DbAgentReview) => r.reviewer_address))];
-    const { data: usersData } = reviewerAddresses.length > 0
-      ? await supabaseAdmin
-          .from('users')
-          .select('wallet_address, handle')
-          .in('wallet_address', reviewerAddresses)
-      : { data: [] };
+    const reviewerAddresses = [
+      ...new Set((reviewsData || []).map((r: DbAgentReview) => r.reviewer_address)),
+    ];
+    const { data: usersData } =
+      reviewerAddresses.length > 0
+        ? await supabaseAdmin
+            .from('users')
+            .select('wallet_address, handle')
+            .in('wallet_address', reviewerAddresses)
+        : { data: [] };
 
-    const handleMap = new Map((usersData || []).map((u: { wallet_address: string; handle: string | null }) =>
-      [u.wallet_address.toLowerCase(), u.handle]
-    ));
+    const handleMap = new Map(
+      (usersData || []).map((u: { wallet_address: string; handle: string | null }) => [
+        u.wallet_address.toLowerCase(),
+        u.handle,
+      ])
+    );
 
     // Fetch stats from view
     const { data: statsData } = await supabaseAdmin
@@ -185,10 +182,7 @@ export async function GET(
 // POST /api/agents/[id]/reviews - Prepare to enable reviews
 // Generates feedback signer keypair if not already present
 // Returns feedbackSignerAddress for setApprovalForAll call
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const auth = await getAuthenticatedUser(request);
     if (!auth) {
@@ -238,10 +232,7 @@ export async function POST(
 
       if (updateError) {
         console.error('Failed to store feedback signer:', updateError);
-        return NextResponse.json(
-          { error: 'Failed to prepare reviews' },
-          { status: 500 }
-        );
+        return NextResponse.json({ error: 'Failed to prepare reviews' }, { status: 500 });
       }
     }
 

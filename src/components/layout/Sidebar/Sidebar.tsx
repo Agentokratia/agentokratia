@@ -100,10 +100,7 @@ export function Sidebar() {
 
           {showAccountMenu && (
             <div className={styles.accountMenu}>
-              <button
-                className={styles.disconnectBtn}
-                onClick={handleDisconnect}
-              >
+              <button className={styles.disconnectBtn} onClick={handleDisconnect}>
                 <LogOut size={16} />
                 Disconnect
               </button>

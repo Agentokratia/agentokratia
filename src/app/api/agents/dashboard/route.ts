@@ -1,11 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/db/supabase';
 import { getAuthenticatedUser } from '@/lib/auth/session';
-import {
-  getOwnedTokenIds,
-  batchVerifyOwnership,
-  type OwnershipStatus,
-} from '@/lib/ownership';
+import { getOwnedTokenIds, batchVerifyOwnership, type OwnershipStatus } from '@/lib/ownership';
 
 /**
  * GET /api/agents/dashboard
@@ -67,12 +63,14 @@ export async function GET(request: NextRequest) {
     // 1. Get agents I control in DB
     const { data: dbAgents, error: dbError } = await supabaseAdmin
       .from('agents')
-      .select(`
+      .select(
+        `
         id, name, description, category, status, price_per_call,
         total_calls, total_earned_cents, icon_url,
         erc8004_token_id, erc8004_chain_id,
         created_at, updated_at
-      `)
+      `
+      )
       .eq('owner_id', auth.userId)
       .order('created_at', { ascending: false });
 
@@ -87,13 +85,13 @@ export async function GET(request: NextRequest) {
 
     // 3. Batch verify ownership for on-chain agents
     const onChainAgents = (dbAgents || []).filter(
-      a => a.erc8004_token_id && a.erc8004_chain_id === chainId
+      (a) => a.erc8004_token_id && a.erc8004_chain_id === chainId
     );
-    const tokenIdsToVerify = onChainAgents.map(a => a.erc8004_token_id!);
+    const tokenIdsToVerify = onChainAgents.map((a) => a.erc8004_token_id!);
     const ownershipMap = await batchVerifyOwnership(tokenIdsToVerify, chainId);
 
     // 4. Build controlled list with ownership status
-    const controlled: ControlledAgent[] = (dbAgents || []).map(agent => {
+    const controlled: ControlledAgent[] = (dbAgents || []).map((agent) => {
       let ownershipStatus: OwnershipStatus = 'draft';
       let onChainOwner: string | undefined;
 
@@ -132,14 +130,10 @@ export async function GET(request: NextRequest) {
 
     // 5. Find claimable agents (I own NFT but DB says someone else owns it)
     const myDbTokenIds = new Set(
-      (dbAgents || [])
-        .filter(a => a.erc8004_token_id)
-        .map(a => a.erc8004_token_id)
+      (dbAgents || []).filter((a) => a.erc8004_token_id).map((a) => a.erc8004_token_id)
     );
 
-    const claimableTokenIds = ownedTokenIds.filter(
-      tid => !myDbTokenIds.has(tid)
-    );
+    const claimableTokenIds = ownedTokenIds.filter((tid) => !myDbTokenIds.has(tid));
 
     let claimable: ClaimableAgent[] = [];
 
@@ -147,15 +141,17 @@ export async function GET(request: NextRequest) {
       // Look up these agents in DB
       const { data: claimableAgents } = await supabaseAdmin
         .from('agents')
-        .select(`
+        .select(
+          `
           id, name, description, category, icon_url,
           erc8004_token_id, erc8004_chain_id,
           users!agents_owner_id_fkey(wallet_address)
-        `)
+        `
+        )
         .in('erc8004_token_id', claimableTokenIds)
         .eq('erc8004_chain_id', chainId);
 
-      claimable = (claimableAgents || []).map(agent => {
+      claimable = (claimableAgents || []).map((agent) => {
         const userData = agent.users as
           | { wallet_address: string }
           | { wallet_address: string }[]
@@ -182,9 +178,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(response);
   } catch (error) {
     console.error('[Dashboard] Error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

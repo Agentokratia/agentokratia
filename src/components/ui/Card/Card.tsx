@@ -12,12 +12,7 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(
     return (
       <div
         ref={ref}
-        className={cn(
-          styles.card,
-          styles[variant],
-          styles[`padding-${padding}`],
-          className
-        )}
+        className={cn(styles.card, styles[variant], styles[`padding-${padding}`], className)}
         {...props}
       >
         {children}

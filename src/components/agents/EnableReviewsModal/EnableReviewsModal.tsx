@@ -141,19 +141,21 @@ export function EnableReviewsModal({
       setTxHash(hash);
 
       // Step 3: IMMEDIATELY save to localStorage (backup)
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({
-        agentId,
-        txHash: hash,
-        chainId: agentChainId,
-        timestamp: Date.now(),
-      }));
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({
+          agentId,
+          txHash: hash,
+          chainId: agentChainId,
+          timestamp: Date.now(),
+        })
+      );
 
       // Step 4: Wait for receipt
       await waitForTransactionReceipt(config, { hash });
 
       // Step 5: Confirm with backend (CRITICAL)
       await confirmWithBackend(hash, agentChainId);
-
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to enable reviews';
       if (message.includes('rejected') || message.includes('denied')) {
@@ -210,9 +212,7 @@ export function EnableReviewsModal({
             </div>
             <h3 className={styles.title}>Wrong Network</h3>
             <p className={styles.subtitle}>Switch to {networkConfig.name} to continue.</p>
-            <Button onClick={() => switchChain({ chainId: agentChainId })}>
-              Switch Network
-            </Button>
+            <Button onClick={() => switchChain({ chainId: agentChainId })}>Switch Network</Button>
           </div>
         );
       }
@@ -244,7 +244,9 @@ export function EnableReviewsModal({
             <Loader2 size={32} className={styles.spinner} />
           </div>
           <h3 className={styles.title}>Enabling Reviews...</h3>
-          <p className={styles.subtitle}>Please confirm in your wallet and wait for confirmation.</p>
+          <p className={styles.subtitle}>
+            Please confirm in your wallet and wait for confirmation.
+          </p>
           {txHash && networkConfig && (
             <a
               href={getExplorerTxUrl(networkConfig.blockExplorerUrl, txHash)}
@@ -266,9 +268,7 @@ export function EnableReviewsModal({
             <Check size={32} />
           </div>
           <h3 className={styles.title}>Reviews Enabled!</h3>
-          <p className={styles.subtitle}>
-            Users can now leave on-chain reviews for your agent.
-          </p>
+          <p className={styles.subtitle}>Users can now leave on-chain reviews for your agent.</p>
           {txHash && networkConfig && (
             <a
               href={getExplorerTxUrl(networkConfig.blockExplorerUrl, txHash)}

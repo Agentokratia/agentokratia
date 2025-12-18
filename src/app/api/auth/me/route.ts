@@ -7,20 +7,14 @@ export async function GET(request: NextRequest) {
     // Get token from Authorization header
     const authHeader = request.headers.get('authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { error: 'No token provided' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: 'No token provided' }, { status: 401 });
     }
 
     const token = authHeader.replace('Bearer ', '');
     const payload = await verifyToken(token);
 
     if (!payload) {
-      return NextResponse.json(
-        { error: 'Invalid token' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
     // Verify session is still valid (not revoked)
@@ -34,10 +28,7 @@ export async function GET(request: NextRequest) {
       .single();
 
     if (!sessionData) {
-      return NextResponse.json(
-        { error: 'Session expired or revoked' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: 'Session expired or revoked' }, { status: 401 });
     }
 
     // Get user
@@ -48,10 +39,7 @@ export async function GET(request: NextRequest) {
       .single();
 
     if (error || !userData) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
     const user = userData as DbUser;
@@ -72,9 +60,6 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Auth check error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

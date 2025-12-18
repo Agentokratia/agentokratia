@@ -23,10 +23,7 @@ export async function POST(request: NextRequest) {
     const { message, signature, inviteCode, handle } = await request.json();
 
     if (!message || !signature) {
-      return NextResponse.json(
-        { error: 'Message and signature are required' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Message and signature are required' }, { status: 400 });
     }
 
     // Parse the SIWE message
@@ -62,10 +59,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (!isValid) {
-      return NextResponse.json(
-        { error: 'Invalid signature' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
     }
     const normalizedAddress = address.toLowerCase();
 
@@ -79,10 +73,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (nonceError || !nonceRecord) {
-      return NextResponse.json(
-        { error: 'Invalid or expired nonce' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: 'Invalid or expired nonce' }, { status: 401 });
     }
 
     const nonceData = nonceRecord as DbAuthNonce;
@@ -135,10 +126,7 @@ export async function POST(request: NextRequest) {
 
       if (rpcError || !result) {
         console.error('Registration RPC error:', rpcError);
-        return NextResponse.json(
-          { error: 'Failed to create user' },
-          { status: 500 }
-        );
+        return NextResponse.json({ error: 'Failed to create user' }, { status: 500 });
       }
 
       // Check for business logic errors from the function
@@ -159,10 +147,7 @@ export async function POST(request: NextRequest) {
 
       if (fetchError || !newUser) {
         console.error('Failed to fetch created user:', fetchError);
-        return NextResponse.json(
-          { error: 'Failed to create user' },
-          { status: 500 }
-        );
+        return NextResponse.json({ error: 'Failed to create user' }, { status: 500 });
       }
 
       user = newUser as DbUser;
@@ -187,15 +172,13 @@ export async function POST(request: NextRequest) {
     const expiresAt = getTokenExpiration();
 
     // Store session
-    const { error: sessionError } = await supabaseAdmin
-      .from('user_sessions')
-      .insert({
-        user_id: user.id,
-        token_hash: tokenHash,
-        expires_at: expiresAt.toISOString(),
-        ip_address: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip'),
-        user_agent: request.headers.get('user-agent'),
-      });
+    const { error: sessionError } = await supabaseAdmin.from('user_sessions').insert({
+      user_id: user.id,
+      token_hash: tokenHash,
+      expires_at: expiresAt.toISOString(),
+      ip_address: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip'),
+      user_agent: request.headers.get('user-agent'),
+    });
 
     if (sessionError) {
       console.error('Failed to create session:', sessionError);
@@ -217,9 +200,6 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Verification error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

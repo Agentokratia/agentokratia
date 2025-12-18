@@ -26,29 +26,25 @@ function generateAgentSecret(): string {
   return `agk_${randomBytes(32).toString('hex')}`;
 }
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id: agentId } = await params;
     const auth = await getAuthenticatedUser(request);
 
     if (!auth?.userId || !auth?.address) {
-      return NextResponse.json(
-        { error: 'Wallet not connected' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: 'Wallet not connected' }, { status: 401 });
     }
     const walletAddress = auth.address;
 
     // Get the agent with current owner info
     const { data: agent, error: agentError } = await supabaseAdmin
       .from('agents')
-      .select(`
+      .select(
+        `
         id, name, owner_id, erc8004_token_id, erc8004_chain_id,
         users!agents_owner_id_fkey(id, wallet_address)
-      `)
+      `
+      )
       .eq('id', agentId)
       .single();
 
@@ -58,10 +54,7 @@ export async function POST(
 
     // Agent must be published on-chain
     if (!agent.erc8004_token_id || !agent.erc8004_chain_id) {
-      return NextResponse.json(
-        { error: 'Agent is not published on-chain' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Agent is not published on-chain' }, { status: 400 });
     }
 
     // Verify caller owns the NFT on-chain
@@ -72,18 +65,12 @@ export async function POST(
     );
 
     if (!ownsNft) {
-      return NextResponse.json(
-        { error: 'You do not own this agent NFT' },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: 'You do not own this agent NFT' }, { status: 403 });
     }
 
     // Check if already the owner
     if (agent.owner_id === auth.userId) {
-      return NextResponse.json(
-        { error: 'You already own this agent' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'You already own this agent' }, { status: 400 });
     }
 
     // Get previous owner info for logging
@@ -113,23 +100,17 @@ export async function POST(
         feedback_operator_set_at: null,
       })
       .eq('id', agentId)
-      .eq('owner_id', previousOwnerId)  // Atomic: only update if owner hasn't changed
+      .eq('owner_id', previousOwnerId) // Atomic: only update if owner hasn't changed
       .select('id');
 
     if (updateError) {
       console.error('[Claim] Update failed:', updateError);
-      return NextResponse.json(
-        { error: 'Failed to claim agent' },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: 'Failed to claim agent' }, { status: 500 });
     }
 
     // Check if update actually happened (race condition protection)
     if (!updateResult || updateResult.length === 0) {
-      return NextResponse.json(
-        { error: 'Agent already claimed by another user' },
-        { status: 409 }
-      );
+      return NextResponse.json({ error: 'Agent already claimed by another user' }, { status: 409 });
     }
 
     // Log the claim
@@ -162,9 +143,6 @@ export async function POST(
     });
   } catch (error) {
     console.error('[Claim] Error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

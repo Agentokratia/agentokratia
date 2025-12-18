@@ -39,10 +39,7 @@ if (typeof window !== 'undefined') {
 
   window.addEventListener('unhandledrejection', (event) => {
     const message = event.reason?.message || event.reason?.toString() || '';
-    if (
-      message.includes('chrome.runtime.sendMessage') ||
-      message.includes('Extension ID')
-    ) {
+    if (message.includes('chrome.runtime.sendMessage') || message.includes('Extension ID')) {
       event.preventDefault();
     }
   });

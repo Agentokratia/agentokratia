@@ -4,10 +4,7 @@ import { supabaseAdmin } from '@/lib/db/supabase';
 // GET /api/agents/[id]/agentcard.json
 // Serves the AgentCard metadata for on-chain tokenURI
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
   // Get agent (public endpoint - no auth needed)
@@ -22,10 +19,7 @@ export async function GET(
   }
 
   if (!agent.agentcard_json) {
-    return NextResponse.json(
-      { error: 'AgentCard not available' },
-      { status: 404 }
-    );
+    return NextResponse.json({ error: 'AgentCard not available' }, { status: 404 });
   }
 
   // Parse and return the stored AgentCard

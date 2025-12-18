@@ -6,7 +6,7 @@ export async function GET() {
   try {
     const networks = await getAllNetworks();
     return NextResponse.json(
-      networks.map(config => ({
+      networks.map((config) => ({
         chainId: config.chainId,
         network: config.network,
         name: config.name,
@@ -20,7 +20,10 @@ export async function GET() {
   } catch (error) {
     console.error('[Network API] Failed to load networks:', error);
     return NextResponse.json(
-      { error: 'Failed to load networks', details: error instanceof Error ? error.message : 'Unknown error' },
+      {
+        error: 'Failed to load networks',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      },
       { status: 503 }
     );
   }

@@ -42,10 +42,7 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       console.error('Error fetching agents:', error);
-      return NextResponse.json(
-        { error: 'Failed to fetch agents' },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: 'Failed to fetch agents' }, { status: 500 });
     }
 
     const agents = (data as DbAgent[]).map(formatAgent);
@@ -53,10 +50,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ agents });
   } catch (error) {
     console.error('Get agents error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
@@ -114,21 +108,12 @@ export async function POST(request: NextRequest) {
 
     if (error) {
       console.error('Error creating agent:', error);
-      return NextResponse.json(
-        { error: 'Failed to create agent' },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: 'Failed to create agent' }, { status: 500 });
     }
 
-    return NextResponse.json(
-      { agent: formatAgent(newAgent as DbAgent) },
-      { status: 201 }
-    );
+    return NextResponse.json({ agent: formatAgent(newAgent as DbAgent) }, { status: 201 });
   } catch (error) {
     console.error('Create agent error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

@@ -112,7 +112,7 @@
   gap: 8px;
   padding: 6px 14px;
   background: rgba(34, 197, 94, 0.1);
-  color: #22C55E;
+  color: #22c55e;
   font-size: 13px;
   font-weight: 500;
   border-radius: 9999px;
@@ -120,10 +120,10 @@
 }
 
 .badge::before {
-  content: "";
+  content: '';
   width: 6px;
   height: 6px;
-  background: #22C55E;
+  background: #22c55e;
   border-radius: 50%;
 }
 
@@ -156,7 +156,7 @@
 }
 
 .connectHint a:hover {
-  color: #22C55E;
+  color: #22c55e;
 }
 
 .connectAction {
@@ -295,7 +295,7 @@
 
 .benefit {
   font-size: 13px;
-  color: #22C55E;
+  color: #22c55e;
   font-weight: 500;
 }
 
@@ -315,7 +315,7 @@
   padding: 14px 24px;
   font-size: 15px;
   font-weight: 600;
-  color: #22C55E;
+  color: #22c55e;
   background: rgba(34, 197, 94, 0.1);
   border: 1px solid rgba(34, 197, 94, 0.3);
   border-radius: var(--radius-sm);
@@ -325,7 +325,7 @@
 
 .waitlistBtn:hover {
   background: rgba(34, 197, 94, 0.15);
-  border-color: #22C55E;
+  border-color: #22c55e;
 }
 
 .cardActions {
@@ -348,7 +348,9 @@
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Buttons */

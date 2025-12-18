@@ -40,7 +40,7 @@ export function useNetworkConfig() {
   const { data: networks } = useAllNetworks();
 
   // Find the network config for the connected chain
-  const networkConfig = networks?.find(n => n.chainId === chainId);
+  const networkConfig = networks?.find((n) => n.chainId === chainId);
 
   return {
     data: networkConfig,
@@ -66,7 +66,7 @@ export function getExplorerUrlForChain(
   txHash: string | null
 ): string | null {
   if (!networks || !chainId || !txHash) return null;
-  const network = networks.find(n => n.chainId === chainId);
+  const network = networks.find((n) => n.chainId === chainId);
   if (!network) return null;
   return getExplorerTxUrl(network.blockExplorerUrl, txHash);
 }
@@ -77,6 +77,6 @@ export function getNetworkName(
   chainId: number | null
 ): string {
   if (!networks || !chainId) return `Chain ${chainId || 'Unknown'}`;
-  const network = networks.find(n => n.chainId === chainId);
+  const network = networks.find((n) => n.chainId === chainId);
   return network?.name || `Chain ${chainId}`;
 }

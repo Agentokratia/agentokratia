@@ -21,21 +21,21 @@ CLIENT                                    SERVER
 
 ## Files
 
-| File | Purpose |
-|------|---------|
-| `types.ts` | Constants (headers, USDC addresses) |
-| `client.ts` | POST with 402 retry logic |
-| `useAgentCall.ts` | React hook for UI |
-| `usePaymentSigner.ts` | EIP-3009 signing |
-| `facilitator.ts` | Server-side CDP verify/settle |
+| File                  | Purpose                             |
+| --------------------- | ----------------------------------- |
+| `types.ts`            | Constants (headers, USDC addresses) |
+| `client.ts`           | POST with 402 retry logic           |
+| `useAgentCall.ts`     | React hook for UI                   |
+| `usePaymentSigner.ts` | EIP-3009 signing                    |
+| `facilitator.ts`      | Server-side CDP verify/settle       |
 
 ## Packages
 
-| Package | Where | Purpose |
-|---------|-------|---------|
+| Package          | Where  | Purpose                |
+| ---------------- | ------ | ---------------------- |
 | `@coinbase/x402` | Server | CDP facilitator config |
-| `@x402/core` | Both | Types, header encoding |
-| `@x402/evm` | Client | EIP-3009 signing |
+| `@x402/core`     | Both   | Types, header encoding |
+| `@x402/evm`      | Client | EIP-3009 signing       |
 
 ## Usage
 

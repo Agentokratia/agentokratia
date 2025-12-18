@@ -22,7 +22,9 @@ const ERC721_TRANSFER_ABI = [
 ] as const;
 
 // Server-side log parsing - tries multiple methods
-function parseTokenIdFromLogs(logs: readonly { topics: readonly `0x${string}`[]; data: `0x${string}` }[]): bigint | null {
+function parseTokenIdFromLogs(
+  logs: readonly { topics: readonly `0x${string}`[]; data: `0x${string}` }[]
+): bigint | null {
   // Method 1: Try AgentRegistered event
   try {
     const parsed = parseEventLogs({
@@ -46,9 +48,8 @@ function parseTokenIdFromLogs(logs: readonly { topics: readonly `0x${string}`[];
       eventName: 'Transfer',
     });
 
-    const mintEvent = parsed.find(p =>
-      'from' in p.args &&
-      p.args.from === '0x0000000000000000000000000000000000000000'
+    const mintEvent = parsed.find(
+      (p) => 'from' in p.args && p.args.from === '0x0000000000000000000000000000000000000000'
     );
 
     if (mintEvent && 'tokenId' in mintEvent.args) {
@@ -61,7 +62,8 @@ function parseTokenIdFromLogs(logs: readonly { topics: readonly `0x${string}`[];
   // Method 3: Try to parse tokenId from raw log topics
   try {
     const TRANSFER_SIG = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
-    const AGENT_REGISTERED_SIG = '0xca52e62c367d81bb2e328eb795f7c7ba24afb478408a26c0e201d155c449bc4a';
+    const AGENT_REGISTERED_SIG =
+      '0xca52e62c367d81bb2e328eb795f7c7ba24afb478408a26c0e201d155c449bc4a';
 
     for (const log of logs) {
       const eventSig = log.topics[0]?.toLowerCase();
@@ -90,10 +92,7 @@ function parseTokenIdFromLogs(logs: readonly { topics: readonly `0x${string}`[];
 // POST /api/agents/[id]/publish/confirm
 // Step 2: After user signs the transaction, verify and update DB
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const auth = await getAuthenticatedUser(request);
 
@@ -116,10 +115,7 @@ export async function POST(
   try {
     networkConfig = await getNetworkConfig(chainId);
   } catch {
-    return NextResponse.json(
-      { error: 'Unsupported chain' },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: 'Unsupported chain' }, { status: 400 });
   }
 
   if (!networkConfig.identityRegistryAddress) {
@@ -173,19 +169,20 @@ export async function POST(
 
     // Try to get transaction receipt with retries
     try {
-      receipt = await withRetry(async () => {
-        return await publicClient.waitForTransactionReceipt({
-          hash: txHash as `0x${string}`,
-          timeout: 30_000,
-          confirmations: 1,
-        });
-      }, 5, 3000);
+      receipt = await withRetry(
+        async () => {
+          return await publicClient.waitForTransactionReceipt({
+            hash: txHash as `0x${string}`,
+            timeout: 30_000,
+            confirmations: 1,
+          });
+        },
+        5,
+        3000
+      );
 
       if (receipt.status !== 'success') {
-        return NextResponse.json(
-          { error: 'Transaction failed on-chain' },
-          { status: 400 }
-        );
+        return NextResponse.json({ error: 'Transaction failed on-chain' }, { status: 400 });
       }
 
       // SECURITY: Verify transaction was sent by the authenticated user

@@ -22,11 +22,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
         <input
           ref={ref}
           id={inputId}
-          className={cn(
-            styles.input,
-            error && styles.error,
-            className
-          )}
+          className={cn(styles.input, error && styles.error, className)}
           {...props}
         />
         {error && <span className={styles.errorText}>{error}</span>}
@@ -58,12 +54,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
         <textarea
           ref={ref}
           id={textareaId}
-          className={cn(
-            styles.input,
-            styles.textarea,
-            error && styles.error,
-            className
-          )}
+          className={cn(styles.input, styles.textarea, error && styles.error, className)}
           {...props}
         />
         {error && <span className={styles.errorText}>{error}</span>}
@@ -95,12 +86,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
         <select
           ref={ref}
           id={selectId}
-          className={cn(
-            styles.input,
-            styles.select,
-            error && styles.error,
-            className
-          )}
+          className={cn(styles.input, styles.select, error && styles.error, className)}
           {...props}
         >
           {options

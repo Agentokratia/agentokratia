@@ -2,7 +2,28 @@
 
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Loader2, Shield, ShieldCheck, Star, X, Zap, Clock, Activity, AlertCircle, Play, Check, Copy, ExternalLink, Code, FileText, MessageSquare, Share2, User, Download } from 'lucide-react';
+import {
+  ArrowLeft,
+  Loader2,
+  Shield,
+  ShieldCheck,
+  Star,
+  X,
+  Zap,
+  Clock,
+  Activity,
+  AlertCircle,
+  Play,
+  Check,
+  Copy,
+  ExternalLink,
+  Code,
+  FileText,
+  MessageSquare,
+  Share2,
+  User,
+  Download,
+} from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import ReactMarkdown from 'react-markdown';
@@ -20,7 +41,7 @@ interface ReviewStats {
   avgScore: number;
   avgRating: number;
   reviewCount: number;
-  distribution: { 5: number; 4: number; 3: number; 2: number; 1: number; };
+  distribution: { 5: number; 4: number; 3: number; 2: number; 1: number };
 }
 
 interface MarketplaceAgentDetail {
@@ -44,14 +65,17 @@ interface MarketplaceAgentDetail {
   erc8004TxHash: string | null;
   erc8004ChainId: number | null;
   reviewsEnabled: boolean;
-  stats?: { uptime: number; avgResponseMs: number; errorRate: number; };
+  stats?: { uptime: number; avgResponseMs: number; errorRate: number };
   reviewStats?: ReviewStats;
 }
 
 type CodeLang = 'js' | 'py' | 'curl';
 type TabId = 'readme' | 'api' | 'reviews';
 
-async function fetchMarketplaceAgent(handle: string, slug: string): Promise<MarketplaceAgentDetail> {
+async function fetchMarketplaceAgent(
+  handle: string,
+  slug: string
+): Promise<MarketplaceAgentDetail> {
   const res = await fetch(`/api/marketplace/${handle}/${slug}`);
   if (!res.ok) {
     if (res.status === 404) throw new Error('Agent not found');
@@ -75,14 +99,18 @@ export default function AgentDetailPage() {
   const [copiedInput, setCopiedInput] = useState(false);
   const [copiedOutput, setCopiedOutput] = useState(false);
 
-  const { data: agent, isLoading, error, refetch: refetchAgent } = useQuery({
+  const {
+    data: agent,
+    isLoading,
+    error,
+    refetch: refetchAgent,
+  } = useQuery({
     queryKey: ['agent', handle, slug],
     queryFn: () => fetchMarketplaceAgent(handle, slug),
     enabled: !!handle && !!slug,
     staleTime: 30_000,
   });
 
-  
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isPlaygroundOpen) setIsPlaygroundOpen(false);
@@ -93,7 +121,9 @@ export default function AgentDetailPage() {
 
   useEffect(() => {
     document.body.style.overflow = isPlaygroundOpen ? 'hidden' : '';
-    return () => { document.body.style.overflow = ''; };
+    return () => {
+      document.body.style.overflow = '';
+    };
   }, [isPlaygroundOpen]);
 
   const handleReviewSubmitted = useCallback(() => {
@@ -154,22 +184,26 @@ export default function AgentDetailPage() {
           post: {
             summary: agent.name,
             description: agent.description || '',
-            requestBody: agent.inputSchema ? {
-              required: true,
-              content: {
-                'application/json': {
-                  schema: agent.inputSchema,
-                },
-              },
-            } : undefined,
+            requestBody: agent.inputSchema
+              ? {
+                  required: true,
+                  content: {
+                    'application/json': {
+                      schema: agent.inputSchema,
+                    },
+                  },
+                }
+              : undefined,
             responses: {
               '200': {
                 description: 'Successful response',
-                content: agent.outputSchema ? {
-                  'application/json': {
-                    schema: agent.outputSchema,
-                  },
-                } : undefined,
+                content: agent.outputSchema
+                  ? {
+                      'application/json': {
+                        schema: agent.outputSchema,
+                      },
+                    }
+                  : undefined,
               },
               '402': {
                 description: 'Payment required - see x402 protocol',
@@ -213,7 +247,9 @@ export default function AgentDetailPage() {
           <AlertCircle size={48} />
           <h2>Agent Not Found</h2>
           <p>{error instanceof Error ? error.message : 'This agent does not exist.'}</p>
-          <Link href={ROUTES.MARKETPLACE}><Button>Back to Marketplace</Button></Link>
+          <Link href={ROUTES.MARKETPLACE}>
+            <Button>Back to Marketplace</Button>
+          </Link>
         </div>
         <PublicFooter />
       </div>
@@ -255,13 +291,17 @@ curl -X POST "${endpoint}" \\
   -d '{"your": "params"}'
 
 # Without a valid payment, you'll receive a 402 response
-# with payment details in the "payment-required" header`
+# with payment details in the "payment-required" header`,
   };
 
   const tabs: { id: TabId; label: string; icon: React.ReactNode }[] = [
     { id: 'readme', label: 'Readme', icon: <FileText size={16} /> },
     { id: 'api', label: 'API', icon: <Code size={16} /> },
-    { id: 'reviews', label: `Reviews${reviewCount > 0 ? ` (${reviewCount})` : ''}`, icon: <MessageSquare size={16} /> },
+    {
+      id: 'reviews',
+      label: `Reviews${reviewCount > 0 ? ` (${reviewCount})` : ''}`,
+      icon: <MessageSquare size={16} />,
+    },
   ];
 
   return (
@@ -278,17 +318,11 @@ curl -X POST "${endpoint}" \\
               <ArrowLeft size={14} /> Marketplace
             </Link>
             <h1 className={styles.agentName}>{agent.name}</h1>
-            {agent.description && (
-              <p className={styles.agentDesc}>{agent.description}</p>
-            )}
+            {agent.description && <p className={styles.agentDesc}>{agent.description}</p>}
           </div>
 
           {/* Try Button */}
-          <Button
-            size="lg"
-            className={styles.tryBtn}
-            onClick={() => setIsPlaygroundOpen(true)}
-          >
+          <Button size="lg" className={styles.tryBtn} onClick={() => setIsPlaygroundOpen(true)}>
             <Play size={18} />
             Try Agent
           </Button>
@@ -305,10 +339,7 @@ curl -X POST "${endpoint}" \\
           {/* Author */}
           <div className={styles.authorCard}>
             <span className={styles.cardLabel}>Developer</span>
-            <Link
-              href={`/creator/${agent.ownerHandle}`}
-              className={styles.authorLink}
-            >
+            <Link href={`/creator/${agent.ownerHandle}`} className={styles.authorLink}>
               <div className={styles.authorAvatar}>
                 <User size={16} />
               </div>
@@ -327,7 +358,9 @@ curl -X POST "${endpoint}" \\
               {reviewCount > 0 && (
                 <div className={styles.statItem}>
                   <Star size={14} fill="#fbbf24" stroke="#fbbf24" />
-                  <span>{avgRating.toFixed(1)} ({reviewCount} reviews)</span>
+                  <span>
+                    {avgRating.toFixed(1)} ({reviewCount} reviews)
+                  </span>
                 </div>
               )}
               {agent.stats?.avgResponseMs && (
@@ -352,7 +385,10 @@ curl -X POST "${endpoint}" \\
             {/* On-chain Verification */}
             {agent.erc8004TokenId ? (
               <a
-                href={getExplorerUrlForChain(networks, agent.erc8004ChainId, agent.erc8004TxHash!) || '#'}
+                href={
+                  getExplorerUrlForChain(networks, agent.erc8004ChainId, agent.erc8004TxHash!) ||
+                  '#'
+                }
                 target="_blank"
                 rel="noopener noreferrer"
                 className={styles.trustItem}
@@ -464,7 +500,9 @@ curl -X POST "${endpoint}" \\
                     <h4>Topics</h4>
                     <div className={styles.tags}>
                       {agent.tags.map((tag) => (
-                        <span key={tag} className={styles.tag}>{tag}</span>
+                        <span key={tag} className={styles.tag}>
+                          {tag}
+                        </span>
                       ))}
                     </div>
                   </div>
@@ -479,9 +517,17 @@ curl -X POST "${endpoint}" \\
                 <div className={styles.integrationHeader}>
                   <h3>Integrate in 2 minutes</h3>
                   <ol className={styles.integrationSteps}>
-                    <li>Install an HTTP client with <a href="https://www.x402.org" target="_blank" rel="noopener noreferrer">x402</a> support (see Node.js and Python examples below)</li>
+                    <li>
+                      Install an HTTP client with{' '}
+                      <a href="https://www.x402.org" target="_blank" rel="noopener noreferrer">
+                        x402
+                      </a>{' '}
+                      support (see Node.js and Python examples below)
+                    </li>
                     <li>Add your wallet private key (needs USDC on Base)</li>
-                    <li>Send a POST request to the endpoint below - you only pay when it succeeds</li>
+                    <li>
+                      Send a POST request to the endpoint below - you only pay when it succeeds
+                    </li>
                   </ol>
                 </div>
 
@@ -512,7 +558,9 @@ curl -X POST "${endpoint}" \\
                       ))}
                     </div>
                     <div className={styles.codeBody}>
-                      <pre><code>{fullCodeExamples[codeLang]}</code></pre>
+                      <pre>
+                        <code>{fullCodeExamples[codeLang]}</code>
+                      </pre>
                       <button className={styles.codeCopyBtn} onClick={copyCode}>
                         {copied ? <Check size={14} /> : <Copy size={14} />}
                       </button>
@@ -520,9 +568,10 @@ curl -X POST "${endpoint}" \\
                     {codeLang !== 'curl' && (
                       <div className={styles.codeFooter}>
                         <a
-                          href={codeLang === 'js'
-                            ? 'https://github.com/Agentokratia/quickstart-example'
-                            : 'https://github.com/Agentokratia/quickstart-example-python'
+                          href={
+                            codeLang === 'js'
+                              ? 'https://github.com/Agentokratia/quickstart-example'
+                              : 'https://github.com/Agentokratia/quickstart-example-python'
                           }
                           target="_blank"
                           rel="noopener noreferrer"
@@ -551,7 +600,15 @@ curl -X POST "${endpoint}" \\
                           <div className={styles.schemaHeader}>
                             <span className={styles.schemaLabel}>Request Body</span>
                             <button className={styles.schemaCopyBtn} onClick={copyInputSchema}>
-                              {copiedInput ? <><Check size={12} /> Copied</> : <><Copy size={12} /> Copy</>}
+                              {copiedInput ? (
+                                <>
+                                  <Check size={12} /> Copied
+                                </>
+                              ) : (
+                                <>
+                                  <Copy size={12} /> Copy
+                                </>
+                              )}
                             </button>
                           </div>
                           <div className={styles.schemaBox}>
@@ -564,7 +621,15 @@ curl -X POST "${endpoint}" \\
                           <div className={styles.schemaHeader}>
                             <span className={styles.schemaLabel}>Response</span>
                             <button className={styles.schemaCopyBtn} onClick={copyOutputSchema}>
-                              {copiedOutput ? <><Check size={12} /> Copied</> : <><Copy size={12} /> Copy</>}
+                              {copiedOutput ? (
+                                <>
+                                  <Check size={12} /> Copied
+                                </>
+                              ) : (
+                                <>
+                                  <Copy size={12} /> Copy
+                                </>
+                              )}
                             </button>
                           </div>
                           <div className={styles.schemaBox}>
@@ -599,8 +664,15 @@ curl -X POST "${endpoint}" \\
                     </div>
                     <div className={styles.reviewBars}>
                       {([5, 4, 3, 2, 1] as const).map((r) => {
-                        const dist = agent.reviewStats?.distribution ?? { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
-                        const pct = reviewCount === 0 ? 0 : Math.round((dist[r] / reviewCount) * 100);
+                        const dist = agent.reviewStats?.distribution ?? {
+                          5: 0,
+                          4: 0,
+                          3: 0,
+                          2: 0,
+                          1: 0,
+                        };
+                        const pct =
+                          reviewCount === 0 ? 0 : Math.round((dist[r] / reviewCount) * 100);
                         return (
                           <div key={r} className={styles.reviewBar}>
                             <span className={styles.barLabel}>{r}</span>
@@ -645,7 +717,9 @@ curl -X POST "${endpoint}" \\
           <div className={styles.panel}>
             <div className={styles.panelHead}>
               <h2>API Playground</h2>
-              <button onClick={() => setIsPlaygroundOpen(false)}><X size={20} /></button>
+              <button onClick={() => setIsPlaygroundOpen(false)}>
+                <X size={20} />
+              </button>
             </div>
             <div className={styles.panelBody}>
               <ApiPlayground

@@ -30,7 +30,10 @@ export async function POST(
     }
 
     if (response.length > 1000) {
-      return NextResponse.json({ error: 'Response must be under 1000 characters' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Response must be under 1000 characters' },
+        { status: 400 }
+      );
     }
 
     // Verify the user owns this agent

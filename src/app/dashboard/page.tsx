@@ -46,7 +46,6 @@ async function fetchRecentPayments(token: string): Promise<PaymentRecord[]> {
   return data.payments || [];
 }
 
-
 export default function DashboardPage() {
   const [showGuide, setShowGuide] = useState(true);
   const { token } = useAuthStore();
@@ -66,7 +65,7 @@ export default function DashboardPage() {
   });
 
   // Calculate real stats
-  const liveAgents = agents.filter(a => a.status === 'live').length;
+  const liveAgents = agents.filter((a) => a.status === 'live').length;
   const totalEarned = agents.reduce((sum, a) => sum + a.totalEarned, 0);
   const totalCalls = agents.reduce((sum, a) => sum + a.totalCalls, 0);
 
@@ -95,12 +94,11 @@ export default function DashboardPage() {
           <div className={styles.gettingStartedHeader}>
             <div>
               <h2 className={styles.gettingStartedTitle}>Get started in 3 steps</h2>
-              <p className={styles.gettingStartedSubtitle}>Set up your first agent and start earning</p>
+              <p className={styles.gettingStartedSubtitle}>
+                Set up your first agent and start earning
+              </p>
             </div>
-            <button
-              className={styles.dismissBtn}
-              onClick={() => setShowGuide(false)}
-            >
+            <button className={styles.dismissBtn} onClick={() => setShowGuide(false)}>
               Dismiss
             </button>
           </div>
@@ -113,18 +111,14 @@ export default function DashboardPage() {
               <div className={styles.stepDesc}>Done! Your wallet is connected</div>
             </div>
             <div className={`${styles.stepCard} ${hasAgents ? styles.completed : ''}`}>
-              <div className={styles.stepNumber}>
-                {hasAgents ? <Check size={12} /> : '2'}
-              </div>
+              <div className={styles.stepNumber}>{hasAgents ? <Check size={12} /> : '2'}</div>
               <div className={styles.stepTitle}>Create an Agent</div>
               <div className={styles.stepDesc}>
                 {hasAgents ? 'Done! Agent created' : 'Register your API endpoint'}
               </div>
             </div>
             <div className={`${styles.stepCard} ${hasLiveAgent ? styles.completed : ''}`}>
-              <div className={styles.stepNumber}>
-                {hasLiveAgent ? <Check size={12} /> : '3'}
-              </div>
+              <div className={styles.stepNumber}>{hasLiveAgent ? <Check size={12} /> : '3'}</div>
               <div className={styles.stepTitle}>Verify & Go Live</div>
               <div className={styles.stepDesc}>
                 {hasLiveAgent ? 'Done! Agent is live' : 'Get your on-chain identity'}
@@ -145,13 +139,21 @@ export default function DashboardPage() {
         <div className={styles.statCard}>
           <div className={styles.statLabel}>Total Earned</div>
           <div className={`${styles.statValue} ${styles.success}`}>
-            {agentsLoading ? <Loader2 size={16} className={styles.spinner} /> : formatCurrency(totalEarned)}
+            {agentsLoading ? (
+              <Loader2 size={16} className={styles.spinner} />
+            ) : (
+              formatCurrency(totalEarned)
+            )}
           </div>
         </div>
         <div className={styles.statCard}>
           <div className={styles.statLabel}>Total Calls</div>
           <div className={styles.statValue}>
-            {agentsLoading ? <Loader2 size={16} className={styles.spinner} /> : totalCalls.toLocaleString()}
+            {agentsLoading ? (
+              <Loader2 size={16} className={styles.spinner} />
+            ) : (
+              totalCalls.toLocaleString()
+            )}
           </div>
         </div>
       </div>
@@ -188,7 +190,9 @@ export default function DashboardPage() {
       <div className={styles.sectionHeader}>
         <h2 className={styles.sectionTitle}>Recent Activity</h2>
         <Link href="/dashboard/payments">
-          <Button variant="secondary" size="sm">View All</Button>
+          <Button variant="secondary" size="sm">
+            View All
+          </Button>
         </Link>
       </div>
       <div className={styles.activityCard}>

@@ -3,7 +3,18 @@
 import { useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Loader2, Zap, Star, Share2, Check, Shield, Clock, Package, ExternalLink } from 'lucide-react';
+import {
+  ArrowLeft,
+  Loader2,
+  Zap,
+  Star,
+  Share2,
+  Check,
+  Shield,
+  Clock,
+  Package,
+  ExternalLink,
+} from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui';
 import { PublicHeader, PublicFooter } from '@/components/layout';
@@ -53,7 +64,11 @@ export default function CreatorProfilePage() {
   const handle = params.handle as string;
   const [copied, setCopied] = useState(false);
 
-  const { data: profile, isLoading, error } = useQuery({
+  const {
+    data: profile,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ['creator-profile', handle],
     queryFn: () => fetchCreatorProfile(handle),
     enabled: !!handle,
@@ -86,8 +101,14 @@ export default function CreatorProfilePage() {
         <PublicHeader currentPage="creator" />
         <div className={styles.errorState}>
           <h2>Profile not found</h2>
-          <p>{error instanceof Error ? error.message : 'This profile doesn\'t exist or may have been removed.'}</p>
-          <Link href={ROUTES.MARKETPLACE}><Button>Browse Marketplace</Button></Link>
+          <p>
+            {error instanceof Error
+              ? error.message
+              : "This profile doesn't exist or may have been removed."}
+          </p>
+          <Link href={ROUTES.MARKETPLACE}>
+            <Button>Browse Marketplace</Button>
+          </Link>
         </div>
         <PublicFooter />
       </div>
@@ -129,9 +150,7 @@ export default function CreatorProfilePage() {
 
             <h1 className={styles.profileName}>{displayName}</h1>
 
-            {profile.bio && (
-              <p className={styles.profileBio}>{profile.bio}</p>
-            )}
+            {profile.bio && <p className={styles.profileBio}>{profile.bio}</p>}
 
             {/* Stats Row */}
             <div className={styles.statsRow}>
@@ -198,11 +217,7 @@ export default function CreatorProfilePage() {
           ) : (
             <div className={styles.agentsGrid}>
               {profile.agents.map((agent) => (
-                <Link
-                  key={agent.id}
-                  href={`/${handle}/${agent.slug}`}
-                  className={styles.agentCard}
-                >
+                <Link key={agent.id} href={`/${handle}/${agent.slug}`} className={styles.agentCard}>
                   <div className={styles.cardHeader}>
                     <h3 className={styles.agentName}>{agent.name}</h3>
                     <span className={styles.priceBadge}>{formatUsdc(agent.pricePerCall)}/call</span>

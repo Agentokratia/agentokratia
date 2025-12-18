@@ -21,13 +21,13 @@ function isInternalUrl(url: string): boolean {
       /^0\./,
     ];
 
-    if (privateRanges.some(r => r.test(hostname))) {
+    if (privateRanges.some((r) => r.test(hostname))) {
       return true;
     }
 
     // Block internal hostnames
     const blockedHosts = ['metadata', 'metadata.google', 'instance-data'];
-    if (blockedHosts.some(h => hostname.includes(h))) {
+    if (blockedHosts.some((h) => hostname.includes(h))) {
       return true;
     }
 
@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
     } catch {
       return NextResponse.json({
         success: false,
-        error: 'Invalid URL format'
+        error: 'Invalid URL format',
       });
     }
 
@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
     if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
       return NextResponse.json({
         success: false,
-        error: 'Only HTTP/HTTPS URLs are supported'
+        error: 'Only HTTP/HTTPS URLs are supported',
       });
     }
 
@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
     if (process.env.NODE_ENV !== 'development' && isInternalUrl(url)) {
       return NextResponse.json({
         success: false,
-        error: 'Internal URLs are not allowed'
+        error: 'Internal URLs are not allowed',
       });
     }
 
@@ -155,9 +155,6 @@ export async function POST(request: NextRequest) {
     }
   } catch (error) {
     console.error('Test endpoint error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

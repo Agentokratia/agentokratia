@@ -78,7 +78,11 @@ interface Props {
   onEnableReviews: () => void;
 }
 
-async function fetchReviews(agentId: string, token: string, page: number): Promise<ReviewsResponse> {
+async function fetchReviews(
+  agentId: string,
+  token: string,
+  page: number
+): Promise<ReviewsResponse> {
   const res = await fetch(`/api/agents/${agentId}/reviews?page=${page}&limit=10&sort=recent`, {
     headers: { Authorization: `Bearer ${token}` },
   });
@@ -106,7 +110,13 @@ async function respondToReview(
   }
 }
 
-export default function ReviewsTab({ agent, blockExplorerUrl, reviewsEnabled, isCheckingReviews, onEnableReviews }: Props) {
+export default function ReviewsTab({
+  agent,
+  blockExplorerUrl,
+  reviewsEnabled,
+  isCheckingReviews,
+  onEnableReviews,
+}: Props) {
   const { token } = useAuthStore();
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
@@ -165,8 +175,8 @@ export default function ReviewsTab({ agent, blockExplorerUrl, reviewsEnabled, is
           <div className={reviewStyles.enableReviewsContent}>
             <h3>Enable Reviews to Build Trust</h3>
             <p>
-              Reviews help users discover quality agents and build confidence before making API calls.
-              Agents with reviews typically see <strong>3x more usage</strong>.
+              Reviews help users discover quality agents and build confidence before making API
+              calls. Agents with reviews typically see <strong>3x more usage</strong>.
             </p>
             <ul className={reviewStyles.benefitsList}>
               <li>On-chain verified reviews users can trust</li>
@@ -282,9 +292,7 @@ export default function ReviewsTab({ agent, blockExplorerUrl, reviewsEnabled, is
                   <span className={reviewStyles.reviewerName}>
                     {review.reviewerHandle || review.reviewerAddress}
                   </span>
-                  <span className={reviewStyles.date}>
-                    {formatRelativeTime(review.createdAt)}
-                  </span>
+                  <span className={reviewStyles.date}>{formatRelativeTime(review.createdAt)}</span>
                 </div>
                 <div className={reviewStyles.stars}>
                   {[1, 2, 3, 4, 5].map((star) => (
@@ -298,21 +306,21 @@ export default function ReviewsTab({ agent, blockExplorerUrl, reviewsEnabled, is
                 </div>
               </div>
 
-              {review.title && (
-                <h4 className={reviewStyles.reviewTitle}>{review.title}</h4>
-              )}
+              {review.title && <h4 className={reviewStyles.reviewTitle}>{review.title}</h4>}
 
-              {review.content && (
-                <p className={reviewStyles.reviewContent}>{review.content}</p>
-              )}
+              {review.content && <p className={reviewStyles.reviewContent}>{review.content}</p>}
 
               <div className={reviewStyles.reviewMeta}>
                 <div className={reviewStyles.tags}>
                   {review.tag1 && (
-                    <span className={reviewStyles.tag}>{TAG_DISPLAY[review.tag1] || review.tag1}</span>
+                    <span className={reviewStyles.tag}>
+                      {TAG_DISPLAY[review.tag1] || review.tag1}
+                    </span>
                   )}
                   {review.tag2 && (
-                    <span className={reviewStyles.tag}>{TAG_DISPLAY[review.tag2] || review.tag2}</span>
+                    <span className={reviewStyles.tag}>
+                      {TAG_DISPLAY[review.tag2] || review.tag2}
+                    </span>
                   )}
                 </div>
                 {review.txHash && (
@@ -352,9 +360,7 @@ export default function ReviewsTab({ agent, blockExplorerUrl, reviewsEnabled, is
                         maxLength={1000}
                       />
                       <div className={reviewStyles.respondActions}>
-                        <span className={reviewStyles.charCount}>
-                          {responseText.length}/1000
-                        </span>
+                        <span className={reviewStyles.charCount}>{responseText.length}/1000</span>
                         <div className={reviewStyles.respondButtons}>
                           <Button
                             variant="secondary"

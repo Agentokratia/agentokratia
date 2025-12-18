@@ -12,11 +12,11 @@ export default function NotFound() {
         {/* Logo */}
         <div className={styles.logo}>
           <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M24 6L9 42H17L19 36H29L31 42H39L24 6Z" fill="currentColor"/>
-            <path d="M24 16L21 28H27L24 16Z" fill="var(--paper)"/>
-            <circle cx="13" cy="10" r="2" fill="currentColor"/>
-            <circle cx="24" cy="5" r="2" fill="currentColor"/>
-            <circle cx="35" cy="10" r="2" fill="currentColor"/>
+            <path d="M24 6L9 42H17L19 36H29L31 42H39L24 6Z" fill="currentColor" />
+            <path d="M24 16L21 28H27L24 16Z" fill="var(--paper)" />
+            <circle cx="13" cy="10" r="2" fill="currentColor" />
+            <circle cx="24" cy="5" r="2" fill="currentColor" />
+            <circle cx="35" cy="10" r="2" fill="currentColor" />
           </svg>
         </div>
 
@@ -46,10 +46,7 @@ export default function NotFound() {
         </div>
 
         {/* Back Link */}
-        <button
-          onClick={() => window.history.back()}
-          className={styles.backLink}
-        >
+        <button onClick={() => window.history.back()} className={styles.backLink}>
           <ArrowLeft size={16} />
           Go back
         </button>

@@ -54,7 +54,11 @@ async function fetchAgents(token: string): Promise<Agent[]> {
 export default function AgentsPage() {
   const { token } = useAuthStore();
 
-  const { data: agents = [], isLoading, error } = useQuery({
+  const {
+    data: agents = [],
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ['agents', token],
     queryFn: () => fetchAgents(token!),
     enabled: !!token,
@@ -83,7 +87,9 @@ export default function AgentsPage() {
       <div className={styles.page}>
         <PageHeader title="My Agents" />
         <div className={styles.errorState}>
-          <p className={styles.errorText}>{error instanceof Error ? error.message : 'Failed to fetch agents'}</p>
+          <p className={styles.errorText}>
+            {error instanceof Error ? error.message : 'Failed to fetch agents'}
+          </p>
           <Button onClick={() => window.location.reload()}>Retry</Button>
         </div>
       </div>
@@ -165,45 +171,31 @@ export default function AgentsPage() {
       {/* Agents Grid */}
       <div className={styles.agentsGrid}>
         {agents.map((agent) => (
-          <Link
-            key={agent.id}
-            href={`/dashboard/agents/${agent.id}`}
-            className={styles.agentCard}
-          >
+          <Link key={agent.id} href={`/dashboard/agents/${agent.id}`} className={styles.agentCard}>
             <div className={styles.agentCardHeader}>
-              <div className={styles.agentIcon}>
-                {agent.name.charAt(0).toUpperCase()}
-              </div>
+              <div className={styles.agentIcon}>{agent.name.charAt(0).toUpperCase()}</div>
               <Badge variant={statusVariant[agent.status] || 'default'}>
                 {agent.status.charAt(0).toUpperCase() + agent.status.slice(1)}
               </Badge>
             </div>
 
             <h3 className={styles.agentName}>{agent.name}</h3>
-            <p className={styles.agentDesc}>
-              {agent.description || 'No description'}
-            </p>
+            <p className={styles.agentDesc}>{agent.description || 'No description'}</p>
 
             <div className={styles.agentMeta}>
               <span className={styles.agentCategory}>
                 {categoryLabels[agent.category] || agent.category}
               </span>
-              <span className={styles.agentPrice}>
-                {formatUsdc(agent.pricePerCall)}/call
-              </span>
+              <span className={styles.agentPrice}>{formatUsdc(agent.pricePerCall)}/call</span>
             </div>
 
             <div className={styles.agentStats}>
               <div className={styles.agentStatItem}>
-                <span className={styles.agentStatValue}>
-                  {agent.totalCalls.toLocaleString()}
-                </span>
+                <span className={styles.agentStatValue}>{agent.totalCalls.toLocaleString()}</span>
                 <span className={styles.agentStatLabel}>calls</span>
               </div>
               <div className={styles.agentStatItem}>
-                <span className={styles.agentStatValue}>
-                  {formatCurrency(agent.totalEarned)}
-                </span>
+                <span className={styles.agentStatValue}>{formatCurrency(agent.totalEarned)}</span>
                 <span className={styles.agentStatLabel}>earned</span>
               </div>
             </div>

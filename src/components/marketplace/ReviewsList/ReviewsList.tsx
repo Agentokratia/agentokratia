@@ -53,13 +53,24 @@ const TAG_DISPLAY: Record<string, string> = {
   expensive: 'Expensive',
 };
 
-async function fetchReviews(ownerHandle: string, agentSlug: string, page: number): Promise<ReviewsResponse> {
-  const res = await fetch(`/api/marketplace/${ownerHandle}/${agentSlug}/reviews?page=${page}&limit=10&sort=recent`);
+async function fetchReviews(
+  ownerHandle: string,
+  agentSlug: string,
+  page: number
+): Promise<ReviewsResponse> {
+  const res = await fetch(
+    `/api/marketplace/${ownerHandle}/${agentSlug}/reviews?page=${page}&limit=10&sort=recent`
+  );
   if (!res.ok) throw new Error('Failed to fetch reviews');
   return res.json();
 }
 
-export function ReviewsList({ ownerHandle, agentSlug, chainId, blockExplorerUrl }: ReviewsListProps) {
+export function ReviewsList({
+  ownerHandle,
+  agentSlug,
+  chainId,
+  blockExplorerUrl,
+}: ReviewsListProps) {
   const [page, setPage] = useState(1);
 
   const { data, isLoading, error } = useQuery({
@@ -78,11 +89,7 @@ export function ReviewsList({ ownerHandle, agentSlug, chainId, blockExplorerUrl 
   }
 
   if (error) {
-    return (
-      <div className={styles.error}>
-        Failed to load reviews
-      </div>
-    );
+    return <div className={styles.error}>Failed to load reviews</div>;
   }
 
   const reviews = data?.reviews || [];
@@ -129,13 +136,9 @@ export function ReviewsList({ ownerHandle, agentSlug, chainId, blockExplorerUrl 
               </div>
             </div>
 
-            {review.title && (
-              <h4 className={styles.reviewTitle}>{review.title}</h4>
-            )}
+            {review.title && <h4 className={styles.reviewTitle}>{review.title}</h4>}
 
-            {review.content && (
-              <p className={styles.reviewContent}>{review.content}</p>
-            )}
+            {review.content && <p className={styles.reviewContent}>{review.content}</p>}
 
             <div className={styles.reviewMeta}>
               <div className={styles.tags}>
@@ -147,9 +150,7 @@ export function ReviewsList({ ownerHandle, agentSlug, chainId, blockExplorerUrl 
                 )}
               </div>
               <div className={styles.metaRight}>
-                <span className={styles.date}>
-                  {formatRelativeTime(review.createdAt)}
-                </span>
+                <span className={styles.date}>{formatRelativeTime(review.createdAt)}</span>
                 {review.txHash && (
                   <a
                     href={getExplorerUrl(review.txHash) || '#'}
@@ -188,7 +189,7 @@ export function ReviewsList({ ownerHandle, agentSlug, chainId, blockExplorerUrl 
             variant="outline"
             size="sm"
             disabled={page === 1}
-            onClick={() => setPage(p => p - 1)}
+            onClick={() => setPage((p) => p - 1)}
           >
             Previous
           </Button>
@@ -199,7 +200,7 @@ export function ReviewsList({ ownerHandle, agentSlug, chainId, blockExplorerUrl 
             variant="outline"
             size="sm"
             disabled={!pagination.hasMore}
-            onClick={() => setPage(p => p + 1)}
+            onClick={() => setPage((p) => p + 1)}
           >
             Next
           </Button>

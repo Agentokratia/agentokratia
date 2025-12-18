@@ -2,13 +2,32 @@
 
 // React hooks for ERC-8004 agent registration
 
-import { useWriteContract, useWaitForTransactionReceipt, useAccount, useChainId, useEstimateGas, useGasPrice, useReadContract } from 'wagmi';
+import {
+  useWriteContract,
+  useWaitForTransactionReceipt,
+  useAccount,
+  useChainId,
+  useEstimateGas,
+  useGasPrice,
+  useReadContract,
+} from 'wagmi';
 import { parseEventLogs, encodeFunctionData, type Log } from 'viem';
 import { IDENTITY_REGISTRY_ABI } from './contracts';
 import { useNetworkConfig } from '@/lib/network/client';
 
 // Minimal log type for event parsing
-type EventLog = Pick<Log, 'topics' | 'data' | 'address' | 'blockHash' | 'blockNumber' | 'transactionHash' | 'transactionIndex' | 'logIndex' | 'removed'>;
+type EventLog = Pick<
+  Log,
+  | 'topics'
+  | 'data'
+  | 'address'
+  | 'blockHash'
+  | 'blockNumber'
+  | 'transactionHash'
+  | 'transactionIndex'
+  | 'logIndex'
+  | 'removed'
+>;
 
 // ERC-721 Transfer event ABI for fallback parsing
 const ERC721_TRANSFER_ABI = [
@@ -68,7 +87,9 @@ export function useRegisterAgent() {
 
 // Parse tokenId from transaction receipt logs
 // Tries multiple methods: AgentRegistered event, Transfer event, raw log parsing
-export function parseTokenIdFromLogs(logs: readonly { topics: readonly `0x${string}`[]; data: `0x${string}` }[]): bigint | null {
+export function parseTokenIdFromLogs(
+  logs: readonly { topics: readonly `0x${string}`[]; data: `0x${string}` }[]
+): bigint | null {
   // Convert to proper Log type for viem parsing
   const eventLogs: EventLog[] = logs.map((log, index) => ({
     topics: log.topics as [`0x${string}`, ...`0x${string}`[]],
@@ -106,9 +127,8 @@ export function parseTokenIdFromLogs(logs: readonly { topics: readonly `0x${stri
     });
 
     // Look for mint (from address is zero)
-    const mintEvent = parsed.find(p =>
-      'from' in p.args &&
-      p.args.from === '0x0000000000000000000000000000000000000000'
+    const mintEvent = parsed.find(
+      (p) => 'from' in p.args && p.args.from === '0x0000000000000000000000000000000000000000'
     );
 
     if (mintEvent && 'tokenId' in mintEvent.args) {
@@ -124,7 +144,8 @@ export function parseTokenIdFromLogs(logs: readonly { topics: readonly `0x${stri
   try {
     // Known event signatures
     const TRANSFER_SIG = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
-    const AGENT_REGISTERED_SIG = '0xca52e62c367d81bb2e328eb795f7c7ba24afb478408a26c0e201d155c449bc4a';
+    const AGENT_REGISTERED_SIG =
+      '0xca52e62c367d81bb2e328eb795f7c7ba24afb478408a26c0e201d155c449bc4a';
 
     for (const log of logs) {
       const eventSig = log.topics[0]?.toLowerCase();
@@ -171,7 +192,11 @@ export function useReviewsEnabled(
     chainId === agentChainId
   );
 
-  const { data: isApproved, isLoading, refetch } = useReadContract({
+  const {
+    data: isApproved,
+    isLoading,
+    refetch,
+  } = useReadContract({
     address: networkConfig?.identityRegistryAddress as `0x${string}`,
     abi: IDENTITY_REGISTRY_ABI,
     functionName: 'isApprovedForAll',
@@ -202,11 +227,14 @@ export function useEstimateRegistrationFee() {
   const contractAddress = networkConfig?.identityRegistryAddress;
 
   // Encode a sample call to estimate gas
-  const data = contractAddress && address ? encodeFunctionData({
-    abi: IDENTITY_REGISTRY_ABI,
-    functionName: 'register',
-    args: ['ipfs://QmSampleTokenURIForGasEstimation'],
-  }) : undefined;
+  const data =
+    contractAddress && address
+      ? encodeFunctionData({
+          abi: IDENTITY_REGISTRY_ABI,
+          functionName: 'register',
+          args: ['ipfs://QmSampleTokenURIForGasEstimation'],
+        })
+      : undefined;
 
   const { data: gasEstimate } = useEstimateGas({
     to: contractAddress ?? undefined,
@@ -217,16 +245,15 @@ export function useEstimateRegistrationFee() {
   const { data: gasPrice } = useGasPrice();
 
   // Calculate fee in ETH
-  const estimatedFee = gasEstimate && gasPrice
-    ? Number(gasEstimate * gasPrice) / 1e18
-    : null;
+  const estimatedFee = gasEstimate && gasPrice ? Number(gasEstimate * gasPrice) / 1e18 : null;
 
   // Format for display (Base has very low fees)
-  const formattedFee = estimatedFee !== null
-    ? estimatedFee < 0.0001
-      ? '< $0.01'
-      : `~$${(estimatedFee * 2000).toFixed(2)}` // Rough ETH price estimate
-    : null;
+  const formattedFee =
+    estimatedFee !== null
+      ? estimatedFee < 0.0001
+        ? '< $0.01'
+        : `~$${(estimatedFee * 2000).toFixed(2)}` // Rough ETH price estimate
+      : null;
 
   return {
     gasEstimate,

@@ -18,17 +18,11 @@ export async function POST(request: NextRequest) {
     }
 
     if (!message?.trim()) {
-      return NextResponse.json(
-        { error: 'Message is required' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Message is required' }, { status: 400 });
     }
 
     if (!category || !['bug', 'feature', 'other'].includes(category)) {
-      return NextResponse.json(
-        { error: 'Invalid category' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Invalid category' }, { status: 400 });
     }
 
     const { error } = await supabaseAdmin.from('feedback').insert({
@@ -42,18 +36,12 @@ export async function POST(request: NextRequest) {
 
     if (error) {
       console.error('Failed to save feedback:', error);
-      return NextResponse.json(
-        { error: 'Failed to save feedback' },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: 'Failed to save feedback' }, { status: 500 });
     }
 
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Feedback error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

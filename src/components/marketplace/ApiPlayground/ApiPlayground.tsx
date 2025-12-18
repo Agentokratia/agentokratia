@@ -1,12 +1,34 @@
 'use client';
 
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
-import { Play, Copy, Check, Loader2, Wallet, Shield, AlertTriangle, Zap, Plus, Trash2, Star, CheckCircle2, ExternalLink, FileText, MessageSquare, ChevronRight } from 'lucide-react';
+import {
+  Play,
+  Copy,
+  Check,
+  Loader2,
+  Wallet,
+  Shield,
+  AlertTriangle,
+  Zap,
+  Plus,
+  Trash2,
+  Star,
+  CheckCircle2,
+  ExternalLink,
+  FileText,
+  MessageSquare,
+  ChevronRight,
+} from 'lucide-react';
 import { useAccount, useChainId, useSwitchChain } from 'wagmi';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { Button } from '@/components/ui';
 import { useAgentCall } from '@/lib/x402/useAgentCall';
-import { useAllNetworks, useNetworkConfig, getExplorerTxUrl, getNetworkName } from '@/lib/network/client';
+import {
+  useAllNetworks,
+  useNetworkConfig,
+  getExplorerTxUrl,
+  getNetworkName,
+} from '@/lib/network/client';
 import { formatUsdc } from '@/lib/utils/format';
 import { highlightJson, formatHttpStatus, highlightHeaders } from '@/lib/utils/syntax';
 import type { X402Response } from '@/lib/x402/client';
@@ -73,7 +95,9 @@ export function ApiPlayground({
   // Playground state
   const [activeTab, setActiveTab] = useState<PlaygroundTab>('params');
   const [responseTab, setResponseTab] = useState<ResponseTab>('body');
-  const [paramValues, setParamValues] = useState<Record<string, string | number | boolean | undefined>>({});
+  const [paramValues, setParamValues] = useState<
+    Record<string, string | number | boolean | undefined>
+  >({});
   const [customHeaders, setCustomHeaders] = useState<Array<{ key: string; value: string }>>([]);
   const [state, setState] = useState<PlaygroundState>('idle');
   const [response, setResponse] = useState<string>('');
@@ -118,14 +142,15 @@ export function ApiPlayground({
   };
 
   const updateCustomHeader = (index: number, field: 'key' | 'value', val: string) => {
-    setCustomHeaders((prev) =>
-      prev.map((h, i) => (i === index ? { ...h, [field]: val } : h))
-    );
+    setCustomHeaders((prev) => prev.map((h, i) => (i === index ? { ...h, [field]: val } : h)));
   };
 
   // Full endpoint URL - uses handle/slug format
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://agentokratia.com';
-  const fullEndpoint = useMemo(() => `${baseUrl}/api/v1/call/${ownerHandle}/${agentSlug}`, [baseUrl, ownerHandle, agentSlug]);
+  const fullEndpoint = useMemo(
+    () => `${baseUrl}/api/v1/call/${ownerHandle}/${agentSlug}`,
+    [baseUrl, ownerHandle, agentSlug]
+  );
 
   // Parse schema properties
   const schemaProperties = useMemo(() => {
@@ -296,7 +321,11 @@ export function ApiPlayground({
       });
 
       // User rejected wallet action = go back to idle, not error
-      if (message.includes('rejected') || message.includes('User rejected') || message.includes('denied')) {
+      if (
+        message.includes('rejected') ||
+        message.includes('User rejected') ||
+        message.includes('denied')
+      ) {
         setState('idle');
         return;
       }
@@ -315,10 +344,14 @@ export function ApiPlayground({
   // Get current step index for progress indicator
   const getCurrentStep = () => {
     switch (state) {
-      case 'signing': return 0;
-      case 'paying': return 1;
-      case 'executing': return 2;
-      default: return -1;
+      case 'signing':
+        return 0;
+      case 'paying':
+        return 1;
+      case 'executing':
+        return 2;
+      default:
+        return -1;
     }
   };
 
@@ -353,8 +386,8 @@ export function ApiPlayground({
             </div>
             <h3 className={styles.connectTitle}>Connect Your Wallet</h3>
             <p className={styles.connectDesc}>
-              Connect your wallet to test this API and pay with USDC.
-              Each call costs <strong>{formatPrice(pricePerCall)}</strong>.
+              Connect your wallet to test this API and pay with USDC. Each call costs{' '}
+              <strong>{formatPrice(pricePerCall)}</strong>.
             </p>
             <div className={styles.connectFeatures}>
               <div className={styles.connectFeature}>
@@ -492,30 +525,35 @@ export function ApiPlayground({
                       <select
                         className={styles.paramSelect}
                         value={String(paramValues[prop.name] ?? '')}
-                        onChange={(e) => setParamValues((prev) => ({
-                          ...prev,
-                          [prop.name]: e.target.value || undefined
-                        }))}
+                        onChange={(e) =>
+                          setParamValues((prev) => ({
+                            ...prev,
+                            [prop.name]: e.target.value || undefined,
+                          }))
+                        }
                       >
-                        {!prop.required && (
-                          <option value="">Select {prop.name}...</option>
-                        )}
+                        {!prop.required && <option value="">Select {prop.name}...</option>}
                         {prop.enum.map((opt) => (
-                          <option key={opt} value={opt}>{opt}</option>
+                          <option key={opt} value={opt}>
+                            {opt}
+                          </option>
                         ))}
                       </select>
                     ) : prop.type === 'boolean' ? (
                       <select
                         className={styles.paramSelect}
-                        value={paramValues[prop.name] === undefined ? '' : String(paramValues[prop.name])}
-                        onChange={(e) => setParamValues((prev) => ({
-                          ...prev,
-                          [prop.name]: e.target.value === '' ? undefined : e.target.value === 'true'
-                        }))}
+                        value={
+                          paramValues[prop.name] === undefined ? '' : String(paramValues[prop.name])
+                        }
+                        onChange={(e) =>
+                          setParamValues((prev) => ({
+                            ...prev,
+                            [prop.name]:
+                              e.target.value === '' ? undefined : e.target.value === 'true',
+                          }))
+                        }
                       >
-                        {!prop.required && (
-                          <option value="">Select...</option>
-                        )}
+                        {!prop.required && <option value="">Select...</option>}
                         <option value="false">false</option>
                         <option value="true">true</option>
                       </select>
@@ -524,13 +562,17 @@ export function ApiPlayground({
                         type="number"
                         className={styles.paramInput}
                         placeholder={prop.required ? `Enter ${prop.name}` : 'Optional'}
-                        value={typeof paramValues[prop.name] === 'number' ? (paramValues[prop.name] as number) : ''}
+                        value={
+                          typeof paramValues[prop.name] === 'number'
+                            ? (paramValues[prop.name] as number)
+                            : ''
+                        }
                         onChange={(e) => {
                           const val = e.target.value;
                           const parsed = val === '' ? undefined : parseInt(val, 10);
                           setParamValues((prev) => ({
                             ...prev,
-                            [prop.name]: Number.isNaN(parsed) ? undefined : parsed
+                            [prop.name]: Number.isNaN(parsed) ? undefined : parsed,
                           }));
                         }}
                       />
@@ -539,13 +581,17 @@ export function ApiPlayground({
                         type="text"
                         className={styles.paramInput}
                         placeholder={`Enter ${prop.name}...`}
-                        value={typeof paramValues[prop.name] === 'string' ? (paramValues[prop.name] as string) : ''}
-                        onChange={(e) => setParamValues((prev) => ({ ...prev, [prop.name]: e.target.value }))}
+                        value={
+                          typeof paramValues[prop.name] === 'string'
+                            ? (paramValues[prop.name] as string)
+                            : ''
+                        }
+                        onChange={(e) =>
+                          setParamValues((prev) => ({ ...prev, [prop.name]: e.target.value }))
+                        }
                       />
                     )}
-                    {prop.description && (
-                      <div className={styles.paramDesc}>{prop.description}</div>
-                    )}
+                    {prop.description && <div className={styles.paramDesc}>{prop.description}</div>}
                   </div>
                 </div>
               ))
@@ -768,11 +814,15 @@ export function ApiPlayground({
                   </button>
                 </div>
               </div>
-              <pre className={styles.responseBody} dangerouslySetInnerHTML={{
-                __html: responseTab === 'body'
-                  ? highlightJson(response)
-                  : highlightHeaders(responseHeaders)
-              }} />
+              <pre
+                className={styles.responseBody}
+                dangerouslySetInnerHTML={{
+                  __html:
+                    responseTab === 'body'
+                      ? highlightJson(response)
+                      : highlightHeaders(responseHeaders),
+                }}
+              />
             </div>
           )}
 
@@ -784,7 +834,10 @@ export function ApiPlayground({
                   <span className={styles.requestLogLabel}>Request</span>
                   <span className={styles.requestLogMethod}>POST {fullEndpoint}</span>
                 </div>
-                <pre className={styles.requestLogBody} dangerouslySetInnerHTML={{ __html: highlightJson(requestJson) }} />
+                <pre
+                  className={styles.requestLogBody}
+                  dangerouslySetInnerHTML={{ __html: highlightJson(requestJson) }}
+                />
               </div>
               <div className={styles.requestLogSection}>
                 <div className={styles.requestLogHeader}>
@@ -811,7 +864,9 @@ export function ApiPlayground({
                     {paymentTxHash && (
                       <div className={styles.paymentRow}>
                         <span>Transaction</span>
-                        <code>{paymentTxHash.slice(0, 10)}...{paymentTxHash.slice(-8)}</code>
+                        <code>
+                          {paymentTxHash.slice(0, 10)}...{paymentTxHash.slice(-8)}
+                        </code>
                       </div>
                     )}
                   </div>
@@ -851,10 +906,7 @@ export function ApiPlayground({
                 </div>
                 <span>Rate this agent</span>
               </div>
-              <button
-                className={styles.reviewNudgeBtn}
-                onClick={() => setCompletionTab('review')}
-              >
+              <button className={styles.reviewNudgeBtn} onClick={() => setCompletionTab('review')}>
                 Write Review
                 <MessageSquare size={14} />
               </button>
@@ -871,7 +923,10 @@ export function ApiPlayground({
               {httpStatus ? formatHttpStatus(httpStatus) : 'Error'}
             </span>
           </div>
-          <pre className={styles.responseBody} dangerouslySetInnerHTML={{ __html: highlightJson(response) }} />
+          <pre
+            className={styles.responseBody}
+            dangerouslySetInnerHTML={{ __html: highlightJson(response) }}
+          />
         </div>
       )}
     </div>

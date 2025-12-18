@@ -63,9 +63,12 @@ function formatDate(dateStr: string): string {
   });
 }
 
-function getNetworkExplorerUrl(network: string, networks: { chainId: number; network: string; blockExplorerUrl: string }[] | undefined): string | null {
+function getNetworkExplorerUrl(
+  network: string,
+  networks: { chainId: number; network: string; blockExplorerUrl: string }[] | undefined
+): string | null {
   if (!networks) return null;
-  const net = networks.find(n => n.network === network);
+  const net = networks.find((n) => n.network === network);
   return net?.blockExplorerUrl || null;
 }
 
@@ -86,7 +89,11 @@ export default function PaymentsPage() {
   const { token } = useAuthStore();
   const { data: networks } = useAllNetworks();
 
-  const { data: agents = [], isLoading: agentsLoading, error: agentsError } = useQuery({
+  const {
+    data: agents = [],
+    isLoading: agentsLoading,
+    error: agentsError,
+  } = useQuery({
     queryKey: ['agent-earnings', token],
     queryFn: () => fetchAgentEarnings(token!),
     enabled: !!token,
@@ -102,7 +109,7 @@ export default function PaymentsPage() {
 
   const totalEarned = agents.reduce((sum, agent) => sum + agent.totalEarned, 0);
   const totalCalls = agents.reduce((sum, agent) => sum + agent.totalCalls, 0);
-  const settledPayments = payments.filter(p => p.status === 'settled').length;
+  const settledPayments = payments.filter((p) => p.status === 'settled').length;
 
   if (agentsLoading) {
     return (
@@ -172,9 +179,7 @@ export default function PaymentsPage() {
                 </div>
               </div>
               <div>
-                <div className={styles.transactionAmount}>
-                  {formatCurrency(agent.totalEarned)}
-                </div>
+                <div className={styles.transactionAmount}>{formatCurrency(agent.totalEarned)}</div>
               </div>
             </div>
           ))
@@ -208,9 +213,10 @@ export default function PaymentsPage() {
             <tbody>
               {payments.map((payment) => {
                 const explorerUrl = getNetworkExplorerUrl(payment.network, networks);
-                const txUrl = explorerUrl && payment.txHash
-                  ? getExplorerTxUrl(explorerUrl, payment.txHash)
-                  : null;
+                const txUrl =
+                  explorerUrl && payment.txHash
+                    ? getExplorerTxUrl(explorerUrl, payment.txHash)
+                    : null;
 
                 return (
                   <tr key={payment.id}>

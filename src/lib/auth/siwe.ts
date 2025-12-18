@@ -10,11 +10,7 @@ export function generateNonce(): string {
 }
 
 // Create a SIWE message
-export function createSiweMessage(
-  address: string,
-  chainId: number,
-  nonce: string
-): SiweMessage {
+export function createSiweMessage(address: string, chainId: number, nonce: string): SiweMessage {
   const domain = typeof window !== 'undefined' ? window.location.host : 'localhost:3000';
   const origin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
 
