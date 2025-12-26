@@ -4,7 +4,6 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import {
   ArrowLeft,
-  Loader2,
   Shield,
   ShieldCheck,
   Star,
@@ -28,7 +27,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { Button } from '@/components/ui';
+import { Button, Skeleton } from '@/components/ui';
 import { PublicHeader, PublicFooter } from '@/components/layout';
 import { ApiPlayground } from '@/components/marketplace/ApiPlayground';
 import { ReviewsList } from '@/components/marketplace/ReviewsList/ReviewsList';
@@ -231,8 +230,58 @@ export default function AgentDetailPage() {
     return (
       <div className={styles.page}>
         <PublicHeader currentPage="agent" />
-        <div className={styles.loadingState}>
-          <Loader2 size={32} className={styles.spinner} />
+        <div className={styles.container}>
+          {/* Skeleton Sidebar */}
+          <aside className={styles.sidebar}>
+            <div className={styles.agentHeader}>
+              <Skeleton width={100} height={14} style={{ marginBottom: 16 }} />
+              <Skeleton width="80%" height={28} style={{ marginBottom: 8 }} />
+              <Skeleton width="100%" height={14} />
+              <Skeleton width="60%" height={14} style={{ marginTop: 4 }} />
+            </div>
+            <Skeleton width="100%" height={44} />
+            <div className={styles.pricingCard}>
+              <div className={styles.priceRow}>
+                <Skeleton width={90} height={14} />
+                <Skeleton width={60} height={28} />
+              </div>
+              <Skeleton width={180} height={12} style={{ marginTop: 12 }} />
+            </div>
+            <div className={styles.authorCard}>
+              <Skeleton width={60} height={11} style={{ marginBottom: 12 }} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <Skeleton variant="circular" width={36} height={36} />
+                <Skeleton width={80} height={14} />
+              </div>
+            </div>
+            <div className={styles.statsCard}>
+              <Skeleton width={70} height={11} style={{ marginBottom: 12 }} />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <Skeleton width={100} height={14} />
+                <Skeleton width={120} height={14} />
+                <Skeleton width={90} height={14} />
+              </div>
+            </div>
+          </aside>
+          {/* Skeleton Main Content */}
+          <main className={styles.main}>
+            <div className={styles.tabs}>
+              <Skeleton width={70} height={20} style={{ margin: '16px 20px' }} />
+              <Skeleton width={50} height={20} style={{ margin: '16px 20px' }} />
+              <Skeleton width={80} height={20} style={{ margin: '16px 20px' }} />
+            </div>
+            <div className={styles.tabContent}>
+              <div className={styles.readmeTab}>
+                <Skeleton width="60%" height={32} style={{ marginBottom: 24 }} />
+                <Skeleton width="100%" height={16} style={{ marginBottom: 12 }} />
+                <Skeleton width="100%" height={16} style={{ marginBottom: 12 }} />
+                <Skeleton width="80%" height={16} style={{ marginBottom: 24 }} />
+                <Skeleton width="40%" height={24} style={{ marginBottom: 16 }} />
+                <Skeleton width="100%" height={16} style={{ marginBottom: 12 }} />
+                <Skeleton width="90%" height={16} />
+              </div>
+            </div>
+          </main>
         </div>
         <PublicFooter />
       </div>
@@ -536,7 +585,11 @@ curl -X POST "${endpoint}" \\
                   <div className={styles.endpointRow}>
                     <span className={styles.method}>POST</span>
                     <code className={styles.endpointUrl}>{endpoint}</code>
-                    <button onClick={copyEndpoint} className={styles.copyBtn}>
+                    <button
+                      onClick={copyEndpoint}
+                      className={styles.copyBtn}
+                      aria-label="Copy endpoint URL"
+                    >
                       {copiedEndpoint ? <Check size={14} /> : <Copy size={14} />}
                     </button>
                   </div>
@@ -561,7 +614,11 @@ curl -X POST "${endpoint}" \\
                       <pre>
                         <code>{fullCodeExamples[codeLang]}</code>
                       </pre>
-                      <button className={styles.codeCopyBtn} onClick={copyCode}>
+                      <button
+                        className={styles.codeCopyBtn}
+                        onClick={copyCode}
+                        aria-label="Copy code"
+                      >
                         {copied ? <Check size={14} /> : <Copy size={14} />}
                       </button>
                     </div>
@@ -717,11 +774,33 @@ curl -X POST "${endpoint}" \\
           <div className={styles.panel}>
             <div className={styles.panelHead}>
               <h2>API Playground</h2>
-              <button onClick={() => setIsPlaygroundOpen(false)}>
+              <button onClick={() => setIsPlaygroundOpen(false)} aria-label="Close playground">
                 <X size={20} />
               </button>
             </div>
             <div className={styles.panelBody}>
+              <div className={styles.paymentExplainer}>
+                <h4>How Payment Works</h4>
+                <ol>
+                  <li>
+                    <strong>Create Session</strong> — Deposit USDC (e.g., $5) to create a prepaid
+                    session
+                  </li>
+                  <li>
+                    <strong>Make Calls</strong> — Each API call deducts from your balance (no
+                    signature needed)
+                  </li>
+                  <li>
+                    <strong>Session Expires</strong> — Unused balance refundable after 1 hour
+                  </li>
+                </ol>
+                <p className={styles.paymentNote}>
+                  You only pay when the API call succeeds.{' '}
+                  <a href="https://x402.org" target="_blank" rel="noopener noreferrer">
+                    Learn more about x402
+                  </a>
+                </p>
+              </div>
               <ApiPlayground
                 ownerHandle={handle}
                 agentSlug={slug}

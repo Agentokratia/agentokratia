@@ -88,15 +88,25 @@ export async function POST(request: NextRequest) {
     let user: DbUser;
 
     if (!existingUser) {
-      // NEW USER - require invite code and handle
-      if (!inviteCode || !handle) {
+      // NEW USER - require invite code and handle (bypass invite in development)
+      const bypassInvite = process.env.NODE_ENV === 'development';
+
+      // Always need a handle for new users
+      if (!handle) {
         return NextResponse.json(
-          { error: 'Invite code and handle required for registration', code: 'INVITE_REQUIRED' },
+          { error: 'Handle required for registration', code: 'INVITE_REQUIRED' },
           { status: 403 }
         );
       }
 
-      const normalizedInviteCode = inviteCode.toUpperCase().trim();
+      // In production, also need invite code
+      if (!bypassInvite && !inviteCode) {
+        return NextResponse.json(
+          { error: 'Invite code required for registration', code: 'INVITE_REQUIRED' },
+          { status: 403 }
+        );
+      }
+
       const normalizedHandle = handle.toLowerCase().trim();
 
       // Validate handle format
@@ -108,49 +118,86 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Atomic registration: validate invite, create user, claim invite in single transaction
-      interface RegisterResult {
-        user_id: string | null;
-        user_email: string | null;
-        error_code: string | null;
-        error_message: string | null;
+      if (bypassInvite) {
+        // Dev mode: create user directly without invite
+        const { data: existingHandle } = await supabaseAdmin
+          .from('users')
+          .select('id')
+          .eq('handle', normalizedHandle)
+          .single();
+
+        if (existingHandle) {
+          return NextResponse.json(
+            { error: 'Handle already taken', code: 'HANDLE_TAKEN' },
+            { status: 400 }
+          );
+        }
+
+        const { data: newUser, error: createError } = await supabaseAdmin
+          .from('users')
+          .insert({
+            wallet_address: normalizedAddress,
+            handle: normalizedHandle,
+            is_whitelisted: true,
+            whitelisted_at: new Date().toISOString(),
+          })
+          .select()
+          .single();
+
+        if (createError || !newUser) {
+          console.error('Failed to create user:', createError);
+          return NextResponse.json({ error: 'Failed to create user' }, { status: 500 });
+        }
+
+        user = newUser as DbUser;
+      } else {
+        // Production: use invite code flow
+        const normalizedInviteCode = inviteCode.toUpperCase().trim();
+
+        // Atomic registration: validate invite, create user, claim invite in single transaction
+        interface RegisterResult {
+          user_id: string | null;
+          user_email: string | null;
+          error_code: string | null;
+          error_message: string | null;
+        }
+
+        const { data: result, error: rpcError } = await supabaseAdmin
+          .rpc('register_user_with_invite', {
+            p_wallet_address: normalizedAddress,
+            p_handle: normalizedHandle,
+            p_invite_code: normalizedInviteCode,
+          })
+          .single<RegisterResult>();
+
+        if (rpcError || !result) {
+          console.error('Registration RPC error:', rpcError);
+          return NextResponse.json({ error: 'Failed to create user' }, { status: 500 });
+        }
+
+        // Check for business logic errors from the function
+        if (result.error_code) {
+          const statusCode = result.error_code === 'HANDLE_TAKEN' ? 400 : 403;
+          return NextResponse.json(
+            { error: result.error_message, code: result.error_code },
+            { status: statusCode }
+          );
+        }
+
+        // Fetch the created user
+        const { data: newUser, error: fetchError } = await supabaseAdmin
+          .from('users')
+          .select('*')
+          .eq('id', result.user_id)
+          .single();
+
+        if (fetchError || !newUser) {
+          console.error('Failed to fetch created user:', fetchError);
+          return NextResponse.json({ error: 'Failed to create user' }, { status: 500 });
+        }
+
+        user = newUser as DbUser;
       }
-
-      const { data: result, error: rpcError } = await supabaseAdmin
-        .rpc('register_user_with_invite', {
-          p_wallet_address: normalizedAddress,
-          p_handle: normalizedHandle,
-          p_invite_code: normalizedInviteCode,
-        })
-        .single<RegisterResult>();
-
-      if (rpcError || !result) {
-        console.error('Registration RPC error:', rpcError);
-        return NextResponse.json({ error: 'Failed to create user' }, { status: 500 });
-      }
-
-      // Check for business logic errors from the function
-      if (result.error_code) {
-        const statusCode = result.error_code === 'HANDLE_TAKEN' ? 400 : 403;
-        return NextResponse.json(
-          { error: result.error_message, code: result.error_code },
-          { status: statusCode }
-        );
-      }
-
-      // Fetch the created user
-      const { data: newUser, error: fetchError } = await supabaseAdmin
-        .from('users')
-        .select('*')
-        .eq('id', result.user_id)
-        .single();
-
-      if (fetchError || !newUser) {
-        console.error('Failed to fetch created user:', fetchError);
-        return NextResponse.json({ error: 'Failed to create user' }, { status: 500 });
-      }
-
-      user = newUser as DbUser;
     } else {
       user = existingUser as DbUser;
     }

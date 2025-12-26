@@ -111,6 +111,33 @@
   color: var(--white);
 }
 
+/* Session badge wrapper */
+.sessionBadgeWrapper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-sm) var(--space-lg);
+  background: var(--cloud);
+  border-bottom: 1px solid var(--sand);
+}
+
+.noSignatureHint {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--success);
+}
+
+.noSignatureHint::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--success);
+}
+
 /* Playground tabs */
 .playgroundTabs {
   display: flex;

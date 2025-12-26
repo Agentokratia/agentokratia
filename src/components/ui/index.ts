@@ -23,3 +23,6 @@ export type { ModalProps, ModalTriggerProps } from './Modal';
 export { Logo } from './Logo';
 
 export { FeedbackWidget } from './FeedbackWidget';
+
+export { Skeleton, SkeletonText, SkeletonAvatar } from './Skeleton';
+export type { SkeletonProps } from './Skeleton';

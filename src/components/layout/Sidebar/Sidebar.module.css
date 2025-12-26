@@ -179,9 +179,6 @@
 
 @media (max-width: 768px) {
   .sidebar {
-    width: 100%;
-    min-height: auto;
-    border-right: none;
-    border-bottom: 1px solid var(--sand);
+    display: none;
   }
 }

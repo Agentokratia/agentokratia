@@ -17,6 +17,9 @@ type SigningState = 'idle' | 'signing' | 'submitting' | 'rejected' | 'error' | '
 // Delay before auto-triggering SIWE sign (allows wallet UI to settle)
 const SIWE_SIGN_DELAY_MS = 300;
 
+// Dev: bypass invite code requirement in development mode
+const BYPASS_INVITE = process.env.NODE_ENV === 'development';
+
 export default function ConnectPage() {
   const { address, isConnected } = useAccount();
   const chainId = useChainId();
@@ -96,7 +99,8 @@ export default function ConnectPage() {
   const handleInviteSubmit = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();
-      if (!pendingAuth || !inviteCode.trim() || !handle.trim()) return;
+      if (!pendingAuth || !handle.trim()) return;
+      if (!BYPASS_INVITE && !inviteCode.trim()) return;
 
       setSigningState('submitting');
       setErrorMessage('');
@@ -240,19 +244,23 @@ export default function ConnectPage() {
           <p className={styles.cardDesc}>Enter your invite code to create an account</p>
           {errorMessage && <p className={styles.cardError}>{errorMessage}</p>}
           <form onSubmit={handleInviteSubmit} className={styles.inviteForm}>
-            <label className={styles.inputLabel}>Invite code</label>
-            <input
-              type="text"
-              value={inviteCode}
-              onChange={(e) =>
-                setInviteCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))
-              }
-              placeholder="A7K9X2"
-              className={styles.inviteInput}
-              required
-              autoFocus
-              maxLength={6}
-            />
+            {!BYPASS_INVITE && (
+              <>
+                <label className={styles.inputLabel}>Invite code</label>
+                <input
+                  type="text"
+                  value={inviteCode}
+                  onChange={(e) =>
+                    setInviteCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))
+                  }
+                  placeholder="A7K9X2"
+                  className={styles.inviteInput}
+                  required
+                  autoFocus
+                  maxLength={6}
+                />
+              </>
+            )}
             <label className={styles.inputLabel}>Choose your handle</label>
             <div className={styles.inputGroup}>
               <span className={styles.inputPrefix}>@</span>
@@ -269,7 +277,7 @@ export default function ConnectPage() {
             <button
               type="submit"
               className={styles.btnPrimary}
-              disabled={!inviteCode.trim() || !handle.trim()}
+              disabled={(!BYPASS_INVITE && !inviteCode.trim()) || !handle.trim()}
             >
               Continue
             </button>

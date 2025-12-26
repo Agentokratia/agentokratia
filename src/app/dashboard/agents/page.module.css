@@ -207,19 +207,14 @@
   color: var(--stone);
 }
 
-.spinner {
-  animation: spin 1s linear infinite;
-  margin-bottom: var(--space-md);
-  color: var(--stone);
-}
-
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+/* Skeleton Card */
+.agentCardSkeleton {
+  background: var(--white);
+  border: 1px solid var(--sand);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  display: flex;
+  flex-direction: column;
 }
 
 .errorText {

@@ -22,6 +22,8 @@ import {
 import { useAccount, useChainId, useSwitchChain } from 'wagmi';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { Button } from '@/components/ui';
+import { SessionBadge } from '@/components/x402/SessionBadge';
+import { DepositModal } from '@/components/x402/DepositModal';
 import { useAgentCall } from '@/lib/x402/useAgentCall';
 import {
   useAllNetworks,
@@ -57,6 +59,7 @@ interface ApiPlaygroundProps {
   outputSchema: JsonSchema | null;
   agentChainId: number | null;
   tokenId: string | null; // On-chain ERC-8004 token ID
+  ownerAddress?: string; // Agent owner's wallet address (receiver for sessions)
   onReviewSubmitted?: () => void; // Callback when review is successfully submitted
 }
 
@@ -80,14 +83,25 @@ export function ApiPlayground({
   inputSchema,
   agentChainId,
   tokenId,
+  ownerAddress,
   onReviewSubmitted,
 }: ApiPlaygroundProps) {
   const { isConnected } = useAccount();
   const connectedChainId = useChainId();
   const { switchChain, isPending: isSwitching } = useSwitchChain();
-  const agentCall = useAgentCall();
   const { data: networkConfig } = useNetworkConfig();
   const { data: allNetworks } = useAllNetworks();
+
+  // Deposit modal state for session creation
+  const [showDepositModal, setShowDepositModal] = useState(false);
+  const [depositAmount, setDepositAmount] = useState<string | undefined>(undefined);
+  const [pendingExecute, setPendingExecute] = useState(false);
+
+  // Pass ownerAddress and depositAmount so session info is available and amount is used
+  const agentCall = useAgentCall({
+    receiverAddress: ownerAddress,
+    depositAmount,
+  });
 
   const isWrongChain = isConnected && agentChainId && connectedChainId !== agentChainId;
   const getChainName = (chainId: number) => getNetworkName(allNetworks, chainId);
@@ -200,8 +214,8 @@ export function ApiPlayground({
     return JSON.stringify(body, null, 2);
   }, [paramValues]);
 
-  // Make API call with progress tracking
-  const handleSendRequest = useCallback(async () => {
+  // Execute the actual API request
+  const executeRequest = useCallback(async () => {
     // Clear any existing timeouts to prevent race conditions
     if (payingTimeoutRef.current) clearTimeout(payingTimeoutRef.current);
     if (executingTimeoutRef.current) clearTimeout(executingTimeoutRef.current);
@@ -235,7 +249,6 @@ export function ApiPlayground({
       });
 
       // Step 2: After signing, show paying state
-      // Only update state if request hasn't completed yet and component is mounted
       payingTimeoutRef.current = setTimeout(() => {
         if (!requestCompleted && mountedRef.current) setState('paying');
       }, 500);
@@ -270,13 +283,11 @@ export function ApiPlayground({
         setResponseSize(`${(new Blob([responseStr]).size / 1024).toFixed(1)} KB`);
         setState('success');
 
-        // Store feedback auth for review form (only if agent has tokenId and not expired)
-        // Note: feedbackExpiry is a Unix timestamp in seconds (string)
+        // Store feedback auth for review form
         if (result.feedbackAuth && result.feedbackExpiry && tokenId) {
           const expirySeconds = parseInt(result.feedbackExpiry, 10);
-          const expiryTimeMs = expirySeconds * 1000; // Convert to milliseconds
+          const expiryTimeMs = expirySeconds * 1000;
           const now = Date.now();
-          // Only store if expiry is valid and in the future
           if (!isNaN(expirySeconds) && expiryTimeMs > now) {
             setFeedbackAuth(result.feedbackAuth);
             setFeedbackExpiry(result.feedbackExpiry);
@@ -301,18 +312,15 @@ export function ApiPlayground({
         }),
       });
     } catch (err) {
-      // Mark request as completed
       requestCompleted = true;
       if (payingTimeoutRef.current) clearTimeout(payingTimeoutRef.current);
       if (executingTimeoutRef.current) clearTimeout(executingTimeoutRef.current);
 
-      // Guard against unmount
       if (!mountedRef.current) return;
 
       const error = err instanceof Error ? err : new Error('Unknown error');
       const message = error.message;
 
-      // Log error with context for debugging
       console.error('[ApiPlayground] Request failed:', {
         error: error.message,
         ownerHandle,
@@ -320,7 +328,7 @@ export function ApiPlayground({
         timestamp: new Date().toISOString(),
       });
 
-      // User rejected wallet action = go back to idle, not error
+      // User rejected wallet action = go back to idle
       if (
         message.includes('rejected') ||
         message.includes('User rejected') ||
@@ -330,7 +338,6 @@ export function ApiPlayground({
         return;
       }
 
-      // Provide structured error response with context
       const errorPayload = {
         error: message,
         code: error.name !== 'Error' ? error.name : undefined,
@@ -340,6 +347,33 @@ export function ApiPlayground({
       setState('error');
     }
   }, [paramValues, ownerHandle, agentSlug, agentCall, pricePerCall, tokenId]);
+
+  // Make API call with progress tracking - shows deposit modal if no session
+  const handleSendRequest = useCallback(() => {
+    // If no active session, show deposit modal first
+    if (!agentCall.hasActiveSession) {
+      setShowDepositModal(true);
+      return;
+    }
+    // Otherwise proceed directly
+    executeRequest();
+  }, [agentCall.hasActiveSession, executeRequest]);
+
+  // Handle deposit confirmation from modal
+  const handleDepositConfirm = useCallback((amount: string) => {
+    setDepositAmount(amount);
+    setShowDepositModal(false);
+    // Set flag to trigger execution after state updates
+    setPendingExecute(true);
+  }, []);
+
+  // Execute request after deposit amount is set
+  useEffect(() => {
+    if (pendingExecute && depositAmount) {
+      setPendingExecute(false);
+      executeRequest();
+    }
+  }, [pendingExecute, depositAmount, executeRequest]);
 
   // Get current step index for progress indicator
   const getCurrentStep = () => {
@@ -476,10 +510,21 @@ export function ApiPlayground({
             setTimeout(() => setCopied(false), 2000);
           }}
           title="Copy endpoint URL"
+          aria-label="Copy endpoint URL"
         >
           {copied ? <Check size={14} /> : <Copy size={14} />}
         </button>
       </div>
+
+      {/* Active session badge */}
+      {agentCall.session && (
+        <div className={styles.sessionBadgeWrapper}>
+          <SessionBadge session={agentCall.session} pricePerCall={pricePerCall} />
+          {agentCall.hasActiveSession && (
+            <span className={styles.noSignatureHint}>No signature required</span>
+          )}
+        </div>
+      )}
 
       {/* Playground tabs */}
       <div className={styles.playgroundTabs}>
@@ -641,6 +686,7 @@ export function ApiPlayground({
                   className={styles.removeHeaderBtn}
                   onClick={() => removeCustomHeader(index)}
                   title="Remove header"
+                  aria-label="Remove header"
                 >
                   <Trash2 size={14} />
                 </button>
@@ -929,6 +975,16 @@ export function ApiPlayground({
           />
         </div>
       )}
+
+      {/* Deposit Modal for session creation */}
+      <DepositModal
+        open={showDepositModal}
+        onOpenChange={setShowDepositModal}
+        onConfirm={handleDepositConfirm}
+        agentName={`@${ownerHandle}/${agentSlug}`}
+        pricePerCall={pricePerCall}
+        isLoading={state === 'signing' || state === 'paying'}
+      />
     </div>
   );
 }

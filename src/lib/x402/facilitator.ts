@@ -1,5 +1,4 @@
-// x402 Facilitator - Using official @coinbase/x402 library
-import { createFacilitatorConfig } from '@coinbase/x402';
+// x402 Facilitator - Using Agentokratia's escrow facilitator
 import {
   HTTPFacilitatorClient,
   decodePaymentSignatureHeader,
@@ -16,10 +15,10 @@ import { createPublicClient, http, encodeFunctionData, parseSignature, type Hex 
 import { baseSepolia, base } from 'viem/chains';
 
 // Environment variables
-const CDP_API_KEY = process.env.CDP_API_KEY || '';
-const CDP_API_SECRET = process.env.CDP_API_SECRET || '';
+const FACILITATOR_URL = process.env.X402_FACILITATOR_URL || 'https://facilitator.agentokratia.com';
+const X402_API_KEY = process.env.X402_API_KEY || '';
 
-// EIP-3009 ABI - same as @x402/evm uses
+// EIP-3009 ABI for payment simulation
 const eip3009ABI = [
   {
     name: 'transferWithAuthorization',
@@ -53,7 +52,7 @@ function getChainFromNetwork(network: string) {
   }
 }
 
-// x402 exact scheme payload structure (matches @x402/evm)
+// Payload structure for exact scheme (for simulation)
 interface ExactEvmPayload {
   authorization: {
     from: string;
@@ -78,15 +77,28 @@ export interface SimulateResponse {
     | 'simulation_failed';
 }
 
-// Create facilitator config with CDP credentials
-const facilitatorConfig = createFacilitatorConfig(CDP_API_KEY, CDP_API_SECRET);
-
-// Create HTTP facilitator client
-const facilitatorClient = new HTTPFacilitatorClient(facilitatorConfig);
+// Create HTTP facilitator client for Agentokratia facilitator
+const facilitatorClient = new HTTPFacilitatorClient({
+  url: FACILITATOR_URL,
+  createAuthHeaders: async (): Promise<{
+    verify: Record<string, string>;
+    settle: Record<string, string>;
+    supported: Record<string, string>;
+  }> => {
+    const authHeader: Record<string, string> = X402_API_KEY
+      ? { Authorization: `Bearer ${X402_API_KEY}` }
+      : {};
+    return {
+      verify: authHeader,
+      settle: authHeader,
+      supported: {},
+    };
+  },
+});
 
 /**
  * Simulate the transferWithAuthorization call to catch errors early
- * Uses same payload structure as @x402/evm ExactEvmScheme
+ * Works with both exact and escrow schemes
  */
 export async function simulatePayment(
   paymentPayload: PaymentPayload,
@@ -94,7 +106,14 @@ export async function simulatePayment(
   rpcUrl: string
 ): Promise<SimulateResponse> {
   try {
-    // Extract payload matching x402's ExactEvmPayload structure
+    // Check if this is an escrow payload (has sessionId or sessionToken)
+    const payload = paymentPayload.payload as Record<string, unknown>;
+    if (payload.sessionId || payload.sessionToken) {
+      // Escrow payments are validated by the facilitator, not simulated on-chain
+      return { success: true };
+    }
+
+    // Extract payload matching exact scheme structure
     const exactEvmPayload = paymentPayload.payload as unknown as ExactEvmPayload;
 
     if (!exactEvmPayload.authorization || !exactEvmPayload.signature) {
@@ -107,7 +126,7 @@ export async function simulatePayment(
 
     const { authorization, signature } = exactEvmPayload;
 
-    // Quick check for self-payment (from == to) - x402 doesn't check this!
+    // Quick check for self-payment (from == to)
     if (authorization.from.toLowerCase() === authorization.to.toLowerCase()) {
       return {
         success: false,
@@ -123,14 +142,13 @@ export async function simulatePayment(
       transport: http(rpcUrl),
     });
 
-    // Parse signature same way x402 does (using viem's parseSignature)
+    // Parse signature using viem
     const parsedSig = parseSignature(signature as Hex);
 
     // Convert yParity (0/1) to v (27/28) if needed - USDC expects 27 or 28
-    // Modern wallets return yParity (0 or 1), legacy wallets return v (27 or 28)
     const v = parsedSig.v !== undefined ? Number(parsedSig.v) : Number(parsedSig.yParity) + 27;
 
-    // Encode the transferWithAuthorization call - same as x402's settle
+    // Encode the transferWithAuthorization call
     const callData = encodeFunctionData({
       abi: eip3009ABI,
       functionName: 'transferWithAuthorization',
@@ -177,7 +195,7 @@ export async function simulatePayment(
   }
 }
 
-// Verify payment with CDP facilitator
+// Verify payment with Agentokratia facilitator
 export async function verifyPayment(
   paymentPayload: PaymentPayload,
   paymentRequirements: PaymentRequirements
@@ -191,7 +209,7 @@ export async function verifyPayment(
   }
 }
 
-// Settle payment with CDP facilitator
+// Settle payment with Agentokratia facilitator
 export async function settlePayment(
   paymentPayload: PaymentPayload,
   paymentRequirements: PaymentRequirements
@@ -201,7 +219,6 @@ export async function settlePayment(
     return result;
   } catch (error) {
     console.error('[x402] Settle error:', error);
-    // Return error in the SettleResponse format
     return {
       success: false,
       errorReason: 'Settlement service error',

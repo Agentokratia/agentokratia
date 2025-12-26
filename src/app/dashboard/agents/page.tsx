@@ -2,8 +2,8 @@
 
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
-import { Plus, Box, Loader2, TrendingUp, DollarSign, Zap } from 'lucide-react';
-import { Button, Badge } from '@/components/ui';
+import { Plus, Box, TrendingUp, DollarSign, Zap } from 'lucide-react';
+import { Button, Badge, Skeleton } from '@/components/ui';
 import { PageHeader } from '@/components/layout';
 import { useAuthStore } from '@/lib/store/authStore';
 import { formatUsdc, formatCurrency } from '@/lib/utils/format';
@@ -74,9 +74,39 @@ export default function AgentsPage() {
     return (
       <div className={styles.page}>
         <PageHeader title="My Agents" />
-        <div className={styles.loadingState}>
-          <Loader2 size={32} className={styles.spinner} />
-          <p>Loading agents...</p>
+        {/* Stats Skeleton */}
+        <div className={styles.statsGrid}>
+          {[1, 2, 3].map((i) => (
+            <div key={i} className={styles.statCard}>
+              <Skeleton width={48} height={48} />
+              <div className={styles.statContent}>
+                <Skeleton width={80} height={24} style={{ marginBottom: 4 }} />
+                <Skeleton width={100} height={13} />
+              </div>
+            </div>
+          ))}
+        </div>
+        {/* Agents Grid Skeleton */}
+        <div className={styles.agentsGrid}>
+          {[1, 2, 3].map((i) => (
+            <div key={i} className={styles.agentCardSkeleton}>
+              <div className={styles.agentCardHeader}>
+                <Skeleton width={44} height={44} />
+                <Skeleton width={50} height={20} />
+              </div>
+              <Skeleton width="70%" height={17} style={{ marginBottom: 6 }} />
+              <Skeleton width="100%" height={14} style={{ marginBottom: 4 }} />
+              <Skeleton width="80%" height={14} style={{ marginBottom: 16 }} />
+              <div className={styles.agentMeta}>
+                <Skeleton width={60} height={11} />
+                <Skeleton width={70} height={13} />
+              </div>
+              <div className={styles.agentStats}>
+                <Skeleton width={60} height={15} />
+                <Skeleton width={80} height={15} />
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     );

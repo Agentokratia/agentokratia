@@ -1,16 +1,18 @@
 // x402 v2 Client - Client-side utilities for agent calls with payment
-import type {
-  PaymentPayload,
-  PaymentRequired,
-  PaymentRequirements,
-  SettleResponse,
-} from '@x402/core/types';
+import type { PaymentPayload, PaymentRequired, SettleResponse } from '@x402/core/types';
 import {
   decodePaymentRequiredHeader,
   decodePaymentResponseHeader,
   encodePaymentSignatureHeader,
 } from '@x402/core/http';
-import { X402_HEADERS } from './types';
+import { X402_HEADERS, isEscrowSettleResponse } from './types';
+
+// Session info extracted from payment response
+export interface SessionResponseInfo {
+  sessionId?: string;
+  balance?: string;
+  token?: string;
+}
 
 export interface X402Response<T = unknown> {
   success: boolean;
@@ -20,12 +22,32 @@ export interface X402Response<T = unknown> {
   errorReason?: string;
   paymentRequired?: PaymentRequired;
   paymentResponse?: SettleResponse;
+  // Session info from escrow scheme
+  sessionInfo?: SessionResponseInfo;
   // Metadata
   httpStatus?: number;
   requestId?: string;
   // Feedback auth for reviews (returned on successful payment)
   feedbackAuth?: string;
   feedbackExpiry?: string;
+}
+
+// Extract session info from payment response
+function extractSessionInfo(
+  paymentResponse: SettleResponse | null
+): SessionResponseInfo | undefined {
+  if (!paymentResponse) return undefined;
+
+  // Use type guard from types.ts for escrow settle response
+  if (isEscrowSettleResponse(paymentResponse) && paymentResponse.session) {
+    return {
+      sessionId: paymentResponse.session.id,
+      balance: paymentResponse.session.balance,
+      token: paymentResponse.session.token,
+    };
+  }
+
+  return undefined;
 }
 
 // Main function to call an agent with x402 payment
@@ -89,7 +111,7 @@ export async function callAgentWithPayment<T = unknown>(
     };
   }
 
-  // Create payment payload (this triggers wallet signature)
+  // Create payment payload (this triggers wallet signature OR uses existing session)
   let paymentPayload: PaymentPayload;
   try {
     paymentPayload = await createPaymentPayload(paymentRequired);
@@ -117,6 +139,9 @@ export async function callAgentWithPayment<T = unknown>(
     ? decodePaymentResponseHeader(paymentResponseHeader)
     : null;
 
+  // Extract session info for escrow payments
+  const sessionInfo = extractSessionInfo(paymentResponse);
+
   // Parse feedback auth headers (for reviews)
   const feedbackAuth = paidResponse.headers.get('X-Feedback-Auth') || undefined;
   const feedbackExpiry = paidResponse.headers.get('X-Feedback-Expires') || undefined;
@@ -127,6 +152,7 @@ export async function callAgentWithPayment<T = unknown>(
       success: true,
       data,
       paymentResponse: paymentResponse || undefined,
+      sessionInfo,
       httpStatus: paidResponse.status,
       requestId: getRequestId(paidResponse),
       feedbackAuth,
@@ -143,6 +169,7 @@ export async function callAgentWithPayment<T = unknown>(
     errorReason: error.reason,
     paymentRequired,
     paymentResponse: paymentResponse || undefined,
+    sessionInfo,
     httpStatus: paidResponse.status,
     requestId: getRequestId(paidResponse),
   };

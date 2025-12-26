@@ -39,5 +39,10 @@
 @media (max-width: 768px) {
   .layout {
     flex-direction: column;
+    padding-top: 56px; /* Height of mobile header */
+  }
+
+  .content {
+    padding: var(--space-md);
   }
 }
