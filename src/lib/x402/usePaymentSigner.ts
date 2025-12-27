@@ -4,29 +4,8 @@ import { useCallback, useMemo, useRef } from 'react';
 import { useAccount, useWalletClient, useChainId } from 'wagmi';
 import { EscrowScheme, type StoredSession } from '@agentokratia/x402-escrow/client';
 import type { PaymentPayload, PaymentRequired } from '@x402/core/types';
-import type { WalletClient, Address } from 'viem';
+import type { Address } from 'viem';
 import { SESSION_DURATION_SECONDS, REFUND_WINDOW_SECONDS } from './constants';
-
-// Adapt wagmi WalletClient to @agentokratia/x402-escrow signer interface
-function createWalletSigner(walletClient: WalletClient) {
-  return {
-    address: walletClient.account!.address,
-    async signTypedData(params: {
-      domain: Record<string, unknown>;
-      types: Record<string, unknown>;
-      primaryType: string;
-      message: Record<string, unknown>;
-    }): Promise<`0x${string}`> {
-      return walletClient.signTypedData({
-        account: walletClient.account!,
-        domain: params.domain as Parameters<WalletClient['signTypedData']>[0]['domain'],
-        types: params.types as Parameters<WalletClient['signTypedData']>[0]['types'],
-        primaryType: params.primaryType,
-        message: params.message as Parameters<WalletClient['signTypedData']>[0]['message'],
-      });
-    },
-  };
-}
 
 export interface UsePaymentSignerOptions {
   /** Custom deposit amount in atomic units (e.g., "10000000" for $10 USDC) */
@@ -71,8 +50,8 @@ export function usePaymentSigner(options: UsePaymentSignerOptions = {}): UsePaym
     }
 
     // Create new scheme with current depositAmount
-    const signer = createWalletSigner(walletClient);
-    const newScheme = new EscrowScheme(signer, {
+    // EscrowScheme expects a full viem WalletClient
+    const newScheme = new EscrowScheme(walletClient, {
       storage: 'localStorage',
       sessionDuration: SESSION_DURATION_SECONDS,
       refundWindow: REFUND_WINDOW_SECONDS,
