@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
-import { Plus, Box, Search, Check, Loader2, TrendingUp } from 'lucide-react';
+import { Plus, Box, Search, Check, TrendingUp } from 'lucide-react';
 import { Button, Skeleton } from '@/components/ui';
 import { PageHeader } from '@/components/layout';
 import { useAuthStore } from '@/lib/store/authStore';

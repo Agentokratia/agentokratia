@@ -1,84 +1,81 @@
 'use client';
 
-import { useCallback, useMemo, useRef } from 'react';
-import { useAccount, useWalletClient, useChainId } from 'wagmi';
-import { EscrowScheme, type StoredSession } from '@agentokratia/x402-escrow/client';
-import type { PaymentPayload, PaymentRequired } from '@x402/core/types';
-import type { Address } from 'viem';
-import { SESSION_DURATION_SECONDS, REFUND_WINDOW_SECONDS } from './constants';
+/**
+ * React hook for signing exact scheme payments.
+ *
+ * Note: Escrow payments are now handled by useEscrowFetch which uses
+ * the package's createEscrowFetch for automatic session management.
+ * This hook is only needed for exact (pay-per-call) payments.
+ */
 
+import { useCallback } from 'react';
+import { useAccount, useWalletClient, useChainId } from 'wagmi';
+import { ExactEvmScheme } from '@x402/evm/exact/client';
+import type { PaymentPayload, PaymentRequired, PaymentRequirements } from '@x402/core/types';
+import type { Address } from 'viem';
+
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface UsePaymentSignerOptions {
-  /** Custom deposit amount in atomic units (e.g., "10000000" for $10 USDC) */
-  depositAmount?: string;
+  // Reserved for future options
 }
 
 export interface UsePaymentSignerResult {
-  signPayment: (paymentRequired: PaymentRequired) => Promise<PaymentPayload>;
+  signPayment: (paymentRequired: PaymentRequired, scheme?: 'exact') => Promise<PaymentPayload>;
   isConnected: boolean;
   address: Address | undefined;
-  getSession: (receiver: string) => StoredSession | null;
-  hasValidSession: (receiver: string, minAmount?: string) => boolean;
-  updateSessionBalance: (sessionId: string, balance: string) => void;
 }
 
-export function usePaymentSigner(options: UsePaymentSignerOptions = {}): UsePaymentSignerResult {
-  const { depositAmount } = options;
+export function usePaymentSigner(_options: UsePaymentSignerOptions = {}): UsePaymentSignerResult {
   const { address, isConnected } = useAccount();
   const { data: walletClient } = useWalletClient();
   const chainId = useChainId();
 
-  // Track current scheme key (address + depositAmount)
-  const schemeRef = useRef<{
-    scheme: EscrowScheme;
-    address: string;
-    depositAmount: string | undefined;
-  } | null>(null);
-
-  // Create or reuse scheme for current wallet and depositAmount
-  // Sessions persist in localStorage, so recreating scheme is safe
-  const scheme = useMemo(() => {
+  // Create exact scheme on demand (stateless, no caching needed)
+  const createExactScheme = useCallback(() => {
     if (!walletClient?.account) return null;
-
-    const currentAddress = walletClient.account.address;
-
-    // Reuse existing scheme if same wallet AND same depositAmount
-    if (
-      schemeRef.current?.address === currentAddress &&
-      schemeRef.current?.depositAmount === depositAmount
-    ) {
-      return schemeRef.current.scheme;
-    }
-
-    // Create new scheme with current depositAmount
-    // EscrowScheme expects a full viem WalletClient
-    const newScheme = new EscrowScheme(walletClient, {
-      storage: 'localStorage',
-      sessionDuration: SESSION_DURATION_SECONDS,
-      refundWindow: REFUND_WINDOW_SECONDS,
-      depositAmount,
+    return new ExactEvmScheme({
+      address: walletClient.account.address,
+      signTypedData: async (message) => {
+        return walletClient.signTypedData({
+          domain: message.domain as Parameters<typeof walletClient.signTypedData>[0]['domain'],
+          types: message.types as Parameters<typeof walletClient.signTypedData>[0]['types'],
+          primaryType: message.primaryType,
+          message: message.message as Parameters<typeof walletClient.signTypedData>[0]['message'],
+        });
+      },
     });
-
-    schemeRef.current = { scheme: newScheme, address: currentAddress, depositAmount };
-    return newScheme;
-  }, [walletClient, depositAmount]);
+  }, [walletClient]);
 
   const signPayment = useCallback(
-    async (paymentRequired: PaymentRequired): Promise<PaymentPayload> => {
-      if (!address || !walletClient || !scheme) {
+    async (paymentRequired: PaymentRequired, _scheme?: 'exact'): Promise<PaymentPayload> => {
+      if (!address || !walletClient) {
         throw new Error('Wallet not connected');
       }
 
-      const requirements = paymentRequired.accepts[0];
+      // Find exact scheme requirements
+      const requirements: PaymentRequirements | undefined = paymentRequired.accepts.find(
+        (r) => r.scheme === 'exact'
+      );
+
       if (!requirements) {
-        throw new Error('No payment requirements found');
+        throw new Error('Exact scheme not available for this payment');
       }
 
-      const expectedNetwork = `eip155:${chainId}`;
-      if (requirements.network !== expectedNetwork) {
-        throw new Error(`Wrong network. Expected ${requirements.network}, got ${expectedNetwork}`);
+      // Validate network
+      const walletNetwork = `eip155:${chainId}`;
+      if (requirements.network !== walletNetwork) {
+        throw new Error(
+          `Wrong network. API requires ${requirements.network}, wallet is on ${walletNetwork}`
+        );
       }
 
-      const partialPayload = await scheme.createPaymentPayload(
+      // Create exact scheme and sign payment
+      const exactScheme = createExactScheme();
+      if (!exactScheme) {
+        throw new Error('Failed to create exact scheme');
+      }
+
+      const partialPayload = await exactScheme.createPaymentPayload(
         paymentRequired.x402Version,
         requirements
       );
@@ -89,38 +86,12 @@ export function usePaymentSigner(options: UsePaymentSignerOptions = {}): UsePaym
         accepted: requirements,
       };
     },
-    [address, walletClient, chainId, scheme]
-  );
-
-  // Simple session accessors - no wrapper abstraction
-  const getSession = useCallback(
-    (receiver: string): StoredSession | null => {
-      return scheme?.sessions.getForReceiver(receiver as Address) ?? null;
-    },
-    [scheme]
-  );
-
-  const hasValidSession = useCallback(
-    (receiver: string, minAmount?: string): boolean => {
-      return scheme?.sessions.hasValid(receiver as Address, minAmount) ?? false;
-    },
-    [scheme]
-  );
-
-  // Update session balance after successful payment
-  const updateSessionBalance = useCallback(
-    (sessionId: string, balance: string): void => {
-      scheme?.sessions.updateBalance(sessionId, balance);
-    },
-    [scheme]
+    [address, walletClient, chainId, createExactScheme]
   );
 
   return {
     signPayment,
     isConnected,
     address,
-    getSession,
-    hasValidSession,
-    updateSessionBalance,
   };
 }

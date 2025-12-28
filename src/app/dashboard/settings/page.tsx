@@ -95,7 +95,7 @@ export default function SettingsPage() {
       disconnect();
       clearAuth();
       router.push('/');
-    } catch (err) {
+    } catch {
       // Even if logout fails, still disconnect locally
       disconnect();
       clearAuth();

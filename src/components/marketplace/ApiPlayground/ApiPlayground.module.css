@@ -1053,6 +1053,137 @@
   background: #f59e0b;
 }
 
+/* Payment Method Selection Panel */
+.selectionPanel {
+  padding: var(--space-lg);
+  background: linear-gradient(180deg, var(--paper) 0%, var(--cloud) 100%);
+  border-top: 1px solid var(--sand);
+}
+
+.selectionHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+  margin-bottom: var(--space-md);
+}
+
+.selectionHeader svg {
+  color: var(--stone);
+}
+
+.selectionOptions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-md);
+}
+
+.selectionOption {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-md);
+  background: var(--white);
+  border: 1px solid var(--sand);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s;
+}
+
+.selectionOption:hover {
+  border-color: var(--ink);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.optionIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  background: var(--cloud);
+  border-radius: var(--radius-sm);
+  color: var(--ink);
+  flex-shrink: 0;
+}
+
+.selectionOption:hover .optionIcon {
+  background: var(--ink);
+  color: var(--white);
+}
+
+.optionInfo {
+  flex: 1;
+}
+
+.optionTitle {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  margin-bottom: 2px;
+}
+
+.optionDesc {
+  display: block;
+  font-size: 12px;
+  color: var(--stone);
+}
+
+.optionArrow {
+  color: var(--stone);
+  flex-shrink: 0;
+}
+
+.selectionOption:hover .optionArrow {
+  color: var(--ink);
+}
+
+/* Recommended option (existing session) */
+.selectionOption.recommended {
+  border-color: var(--brand);
+  background: var(--brand-bg, rgba(37, 99, 235, 0.04));
+}
+
+.selectionOption.recommended .optionIcon {
+  background: var(--brand);
+  color: var(--white);
+}
+
+.recommendedBadge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--brand);
+  background: var(--brand-bg, rgba(37, 99, 235, 0.1));
+  padding: 2px 6px;
+  border-radius: var(--radius-xs);
+  margin-left: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.selectionCancel {
+  display: block;
+  width: 100%;
+  padding: var(--space-sm);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--stone);
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+
+.selectionCancel:hover {
+  color: var(--ink);
+}
+
 /* Responsive */
 @media (max-width: 600px) {
   .tryAction {

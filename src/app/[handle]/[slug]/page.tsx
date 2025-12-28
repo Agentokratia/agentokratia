@@ -56,6 +56,7 @@ interface MarketplaceAgentDetail {
   ownerId: string;
   ownerHandle: string;
   ownerName: string | null;
+  ownerWalletAddress: string | null;
   inputSchema: object | null;
   outputSchema: object | null;
   createdAt: string;
@@ -102,7 +103,6 @@ export default function AgentDetailPage() {
     data: agent,
     isLoading,
     error,
-    refetch: refetchAgent,
   } = useQuery({
     queryKey: ['agent', handle, slug],
     queryFn: () => fetchMarketplaceAgent(handle, slug),
@@ -810,6 +810,7 @@ curl -X POST "${endpoint}" \\
                 outputSchema={agent.outputSchema as Record<string, unknown> | null}
                 agentChainId={agent.erc8004ChainId}
                 tokenId={agent.erc8004TokenId}
+                ownerAddress={agent.ownerWalletAddress ?? undefined}
                 onReviewSubmitted={handleReviewSubmitted}
               />
             </div>

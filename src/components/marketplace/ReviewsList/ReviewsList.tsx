@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Star, ExternalLink, Loader2, ChevronDown, User, MessageSquare } from 'lucide-react';
+import { Star, ExternalLink, Loader2, User, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/Button/Button';
 import { formatRelativeTime } from '@/lib/utils/format';
 import styles from './ReviewsList.module.css';
@@ -68,7 +68,7 @@ async function fetchReviews(
 export function ReviewsList({
   ownerHandle,
   agentSlug,
-  chainId,
+  chainId: _,
   blockExplorerUrl,
 }: ReviewsListProps) {
   const [page, setPage] = useState(1);

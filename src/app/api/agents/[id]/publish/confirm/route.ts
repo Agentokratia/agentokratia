@@ -29,6 +29,7 @@ function parseTokenIdFromLogs(
   try {
     const parsed = parseEventLogs({
       abi: IDENTITY_REGISTRY_ABI,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       logs: logs as any,
       eventName: 'AgentRegistered',
     });
@@ -44,6 +45,7 @@ function parseTokenIdFromLogs(
   try {
     const parsed = parseEventLogs({
       abi: ERC721_TRANSFER_ABI,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       logs: logs as any,
       eventName: 'Transfer',
     });

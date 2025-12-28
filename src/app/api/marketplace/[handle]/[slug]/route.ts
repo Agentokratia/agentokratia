@@ -20,6 +20,7 @@ interface MarketplaceAgentDetail {
   ownerId: string;
   ownerHandle: string;
   ownerName: string | null;
+  ownerWalletAddress: string | null;
   inputSchema: object | null;
   outputSchema: object | null;
   // ERC-8004 on-chain identity
@@ -60,7 +61,7 @@ export async function GET(
     // First find the user by handle
     const { data: user, error: userError } = await supabaseAdmin
       .from('users')
-      .select('id, handle, name')
+      .select('id, handle, name, wallet_address')
       .eq('handle', handle.toLowerCase())
       .single();
 
@@ -113,6 +114,7 @@ export async function GET(
       ownerId: agent.owner_id,
       ownerHandle: user.handle,
       ownerName: user.name ?? null,
+      ownerWalletAddress: user.wallet_address ?? null,
       inputSchema: agent.input_schema ?? null,
       outputSchema: agent.output_schema ?? null,
       // ERC-8004 on-chain identity

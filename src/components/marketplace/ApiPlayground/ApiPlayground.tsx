@@ -22,9 +22,8 @@ import {
 import { useAccount, useChainId, useSwitchChain } from 'wagmi';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { Button } from '@/components/ui';
-import { SessionBadge } from '@/components/x402/SessionBadge';
 import { DepositModal } from '@/components/x402/DepositModal';
-import { useAgentCall } from '@/lib/x402/useAgentCall';
+import { useAgentCall, type CallOptions } from '@/lib/x402/useAgentCall';
 import {
   useAllNetworks,
   useNetworkConfig,
@@ -34,8 +33,18 @@ import {
 import { formatUsdc } from '@/lib/utils/format';
 import { highlightJson, formatHttpStatus, highlightHeaders } from '@/lib/utils/syntax';
 import type { X402Response } from '@/lib/x402/client';
+import type { PaymentRequired, PaymentRequirements } from '@x402/core/types';
 import { ReviewForm } from '../ReviewForm/ReviewForm';
 import styles from './ApiPlayground.module.css';
+
+// Decode base64 payment-required header
+function decodePaymentRequired(header: string): PaymentRequired | null {
+  try {
+    return JSON.parse(atob(header)) as PaymentRequired;
+  } catch {
+    return null;
+  }
+}
 
 interface JsonSchemaProperty {
   type: string;
@@ -63,22 +72,16 @@ interface ApiPlaygroundProps {
   onReviewSubmitted?: () => void; // Callback when review is successfully submitted
 }
 
-type PlaygroundState = 'idle' | 'signing' | 'paying' | 'executing' | 'success' | 'error';
+type PlaygroundState = 'idle' | 'probing' | 'selecting' | 'loading' | 'success' | 'error';
+type PaymentScheme = 'exact' | 'escrow';
 type PlaygroundTab = 'params' | 'headers' | 'request';
 type ResponseTab = 'body' | 'headers';
 type CompletionTab = 'response' | 'request-log' | 'review';
 
-// Progress steps for the call journey
-const PROGRESS_STEPS = [
-  { id: 'sign', label: 'Approve Payment', description: 'Sign with your wallet' },
-  { id: 'pay', label: 'Processing', description: 'Sending payment' },
-  { id: 'execute', label: 'Executing', description: 'Running agent' },
-] as const;
-
 export function ApiPlayground({
   ownerHandle,
   agentSlug,
-  agentName,
+  agentName: _,
   pricePerCall,
   inputSchema,
   agentChainId,
@@ -92,10 +95,17 @@ export function ApiPlayground({
   const { data: networkConfig } = useNetworkConfig();
   const { data: allNetworks } = useAllNetworks();
 
+  // Payment selection state
+  const [paymentRequired, setPaymentRequired] = useState<PaymentRequired | null>(null);
+  const [, setSelectedScheme] = useState<PaymentScheme | null>(null);
+  const [selectedRequirements, setSelectedRequirements] = useState<PaymentRequirements | null>(
+    null
+  );
+
   // Deposit modal state for session creation
   const [showDepositModal, setShowDepositModal] = useState(false);
   const [depositAmount, setDepositAmount] = useState<string | undefined>(undefined);
-  const [pendingExecute, setPendingExecute] = useState(false);
+  const [pendingExecution, setPendingExecution] = useState(false);
 
   // Pass ownerAddress and depositAmount so session info is available and amount is used
   const agentCall = useAgentCall({
@@ -131,18 +141,13 @@ export function ApiPlayground({
   const [paymentTxHash, setPaymentTxHash] = useState<string | null>(null);
   const [paidAmount, setPaidAmount] = useState<number | null>(null);
 
-  // Refs for cleanup and race condition prevention
+  // Ref for cleanup on unmount
   const mountedRef = useRef(true);
-  const payingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const executingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Cleanup on unmount
   useEffect(() => {
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
-      if (payingTimeoutRef.current) clearTimeout(payingTimeoutRef.current);
-      if (executingTimeoutRef.current) clearTimeout(executingTimeoutRef.current);
     };
   }, []);
 
@@ -214,33 +219,133 @@ export function ApiPlayground({
     return JSON.stringify(body, null, 2);
   }, [paramValues]);
 
-  // Execute the actual API request
-  const executeRequest = useCallback(async () => {
-    // Clear any existing timeouts to prevent race conditions
-    if (payingTimeoutRef.current) clearTimeout(payingTimeoutRef.current);
-    if (executingTimeoutRef.current) clearTimeout(executingTimeoutRef.current);
+  // Execute the API request
+  const executeRequest = useCallback(
+    async (options?: CallOptions) => {
+      // Reset state
+      setResponse('');
+      setResponseHeaders({});
+      setResponseTime(null);
+      setHttpStatus(null);
+      setFullResult(null);
+      setCompletionTab('response');
+      setFeedbackAuth(null);
+      setFeedbackExpiry(null);
+      setPaymentTxHash(null);
+      setPaidAmount(null);
+      setState('loading');
 
-    // Reset all state
-    setResponse('');
-    setResponseHeaders({});
-    setResponseTime(null);
-    setHttpStatus(null);
-    setFullResult(null);
-    setCompletionTab('response');
-    setFeedbackAuth(null);
-    setFeedbackExpiry(null);
-    setPaymentTxHash(null);
-    setPaidAmount(null);
+      try {
+        const startTime = Date.now();
 
-    // Step 1: Signing
-    setState('signing');
+        const body: Record<string, unknown> = {};
+        Object.entries(paramValues).forEach(([key, value]) => {
+          if (value !== undefined && value !== '') {
+            body[key] = value;
+          }
+        });
 
-    // Track if request completed to prevent timeout state updates after completion
-    let requestCompleted = false;
+        const result = await agentCall.call(ownerHandle, agentSlug, body, options);
+
+        if (!mountedRef.current) return;
+
+        const elapsed = Date.now() - startTime;
+        setResponseTime(elapsed);
+        setFullResult(result);
+        setHttpStatus(result.httpStatus || (result.success ? 200 : 400));
+
+        // Capture payment info for receipt
+        if (result.paymentResponse?.transaction) {
+          setPaymentTxHash(result.paymentResponse.transaction);
+        }
+        setPaidAmount(pricePerCall);
+
+        if (result.success) {
+          const responseStr = JSON.stringify(result.data, null, 2);
+          setResponse(responseStr);
+          setResponseSize(`${(new Blob([responseStr]).size / 1024).toFixed(1)} KB`);
+          setState('success');
+
+          // Store feedback auth for review form
+          if (result.feedbackAuth && result.feedbackExpiry && tokenId) {
+            const expirySeconds = parseInt(result.feedbackExpiry, 10);
+            const expiryTimeMs = expirySeconds * 1000;
+            const now = Date.now();
+            if (!isNaN(expirySeconds) && expiryTimeMs > now) {
+              setFeedbackAuth(result.feedbackAuth);
+              setFeedbackExpiry(result.feedbackExpiry);
+            }
+          }
+        } else {
+          const errorResponse = {
+            error: result.error,
+            ...(result.errorReason && { reason: result.errorReason }),
+            ...(result.errorDetails && { details: result.errorDetails }),
+          };
+          setResponse(JSON.stringify(errorResponse, null, 2));
+          setState('error');
+        }
+
+        // Set response headers
+        setResponseHeaders({
+          'content-type': 'application/json',
+          'x-request-id': result.requestId || 'unknown',
+          ...(result.paymentResponse?.transaction && {
+            'x-payment-tx': result.paymentResponse.transaction,
+          }),
+        });
+      } catch (err) {
+        if (!mountedRef.current) return;
+
+        const error = err instanceof Error ? err : new Error('Unknown error');
+        const message = error.message;
+
+        console.error('[ApiPlayground] Request failed:', {
+          error: error.message,
+          ownerHandle,
+          agentSlug,
+          timestamp: new Date().toISOString(),
+        });
+
+        // User rejected wallet action = show cancelled message briefly
+        if (
+          message.includes('rejected') ||
+          message.includes('User rejected') ||
+          message.includes('denied')
+        ) {
+          setResponse(JSON.stringify({ message: 'Payment cancelled' }, null, 2));
+          setHttpStatus(null);
+          setState('error');
+          // Auto-dismiss after 2 seconds
+          setTimeout(() => {
+            if (mountedRef.current) {
+              setResponse('');
+              setState('idle');
+            }
+          }, 2000);
+          return;
+        }
+
+        const errorPayload = {
+          error: message,
+          code: error.name !== 'Error' ? error.name : undefined,
+          timestamp: new Date().toISOString(),
+        };
+        setResponse(JSON.stringify(errorPayload, null, 2));
+        setState('error');
+      }
+    },
+    [paramValues, ownerHandle, agentSlug, agentCall, pricePerCall, tokenId]
+  );
+
+  // Probe endpoint to get payment options
+  const probeEndpoint = useCallback(async () => {
+    setState('probing');
+    setPaymentRequired(null);
+    setSelectedScheme(null);
+    setSelectedRequirements(null);
 
     try {
-      const startTime = Date.now();
-
       const body: Record<string, unknown> = {};
       Object.entries(paramValues).forEach(([key, value]) => {
         if (value !== undefined && value !== '') {
@@ -248,146 +353,96 @@ export function ApiPlayground({
         }
       });
 
-      // Step 2: After signing, show paying state
-      payingTimeoutRef.current = setTimeout(() => {
-        if (!requestCompleted && mountedRef.current) setState('paying');
-      }, 500);
-      executingTimeoutRef.current = setTimeout(() => {
-        if (!requestCompleted && mountedRef.current) setState('executing');
-      }, 2000);
-
-      const result = await agentCall.call(ownerHandle, agentSlug, body);
-
-      // Mark request as completed to prevent timeout state updates
-      requestCompleted = true;
-      if (payingTimeoutRef.current) clearTimeout(payingTimeoutRef.current);
-      if (executingTimeoutRef.current) clearTimeout(executingTimeoutRef.current);
-
-      // Guard all state updates against unmount
-      if (!mountedRef.current) return;
-
-      const elapsed = Date.now() - startTime;
-      setResponseTime(elapsed);
-      setFullResult(result);
-      setHttpStatus(result.httpStatus || (result.success ? 200 : 400));
-
-      // Capture payment info for receipt
-      if (result.paymentResponse?.transaction) {
-        setPaymentTxHash(result.paymentResponse.transaction);
-      }
-      setPaidAmount(pricePerCall);
-
-      if (result.success) {
-        const responseStr = JSON.stringify(result.data, null, 2);
-        setResponse(responseStr);
-        setResponseSize(`${(new Blob([responseStr]).size / 1024).toFixed(1)} KB`);
-        setState('success');
-
-        // Store feedback auth for review form
-        if (result.feedbackAuth && result.feedbackExpiry && tokenId) {
-          const expirySeconds = parseInt(result.feedbackExpiry, 10);
-          const expiryTimeMs = expirySeconds * 1000;
-          const now = Date.now();
-          if (!isNaN(expirySeconds) && expiryTimeMs > now) {
-            setFeedbackAuth(result.feedbackAuth);
-            setFeedbackExpiry(result.feedbackExpiry);
-          }
-        }
-      } else {
-        const errorResponse = {
-          error: result.error,
-          ...(result.errorReason && { reason: result.errorReason }),
-          ...(result.errorDetails && { details: result.errorDetails }),
-        };
-        setResponse(JSON.stringify(errorResponse, null, 2));
-        setState('error');
-      }
-
-      // Set response headers
-      setResponseHeaders({
-        'content-type': 'application/json',
-        'x-request-id': result.requestId || 'unknown',
-        ...(result.paymentResponse?.transaction && {
-          'x-payment-tx': result.paymentResponse.transaction,
-        }),
-      });
-    } catch (err) {
-      requestCompleted = true;
-      if (payingTimeoutRef.current) clearTimeout(payingTimeoutRef.current);
-      if (executingTimeoutRef.current) clearTimeout(executingTimeoutRef.current);
-
-      if (!mountedRef.current) return;
-
-      const error = err instanceof Error ? err : new Error('Unknown error');
-      const message = error.message;
-
-      console.error('[ApiPlayground] Request failed:', {
-        error: error.message,
-        ownerHandle,
-        agentSlug,
-        timestamp: new Date().toISOString(),
+      const response = await fetch(fullEndpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
       });
 
-      // User rejected wallet action = go back to idle
-      if (
-        message.includes('rejected') ||
-        message.includes('User rejected') ||
-        message.includes('denied')
-      ) {
-        setState('idle');
-        return;
+      if (response.status !== 402) {
+        throw new Error(`Expected 402, got ${response.status}`);
       }
 
-      const errorPayload = {
-        error: message,
-        code: error.name !== 'Error' ? error.name : undefined,
-        timestamp: new Date().toISOString(),
-      };
-      setResponse(JSON.stringify(errorPayload, null, 2));
+      const paymentRequiredHeader = response.headers.get('payment-required');
+      if (!paymentRequiredHeader) {
+        throw new Error('Missing payment-required header');
+      }
+
+      const paymentReq = decodePaymentRequired(paymentRequiredHeader);
+      if (!paymentReq?.accepts?.length) {
+        throw new Error('Invalid payment-required response');
+      }
+
+      setPaymentRequired(paymentReq);
+
+      // Always show selection UI as confirmation step
+      setState('selecting');
+    } catch (error) {
+      console.error('[ApiPlayground] Probe failed:', error);
       setState('error');
+      setResponse(
+        JSON.stringify(
+          { error: error instanceof Error ? error.message : 'Failed to get payment options' },
+          null,
+          2
+        )
+      );
     }
-  }, [paramValues, ownerHandle, agentSlug, agentCall, pricePerCall, tokenId]);
+  }, [paramValues, fullEndpoint, executeRequest]);
 
-  // Make API call with progress tracking - shows deposit modal if no session
+  // Handle scheme selection
+  const handleSchemeSelect = useCallback(
+    (scheme: PaymentScheme) => {
+      if (!paymentRequired) return;
+      const req = paymentRequired.accepts.find((a) => a.scheme === scheme);
+      if (!req) return;
+
+      setSelectedScheme(scheme);
+      setSelectedRequirements(req);
+
+      if (scheme === 'escrow') {
+        // Open deposit modal for new pre-paid session
+        setShowDepositModal(true);
+      } else {
+        // Pay per call (exact scheme)
+        setState('idle');
+        executeRequest({ scheme: 'exact' });
+      }
+    },
+    [paymentRequired, executeRequest]
+  );
+
+  // Handle using existing session (no deposit needed)
+  const handleUseExistingSession = useCallback(
+    (sessionId?: string) => {
+      setSelectedScheme('escrow');
+      setState('idle');
+      // Use specific session if provided, otherwise auto-select best
+      executeRequest({ scheme: 'escrow', session: sessionId || 'auto' });
+    },
+    [executeRequest]
+  );
+
+  // Handle send request - always probe for payment options (user chooses)
   const handleSendRequest = useCallback(() => {
-    // If no active session, show deposit modal first
-    if (!agentCall.hasActiveSession) {
-      setShowDepositModal(true);
-      return;
-    }
-    // Otherwise proceed directly
-    executeRequest();
-  }, [agentCall.hasActiveSession, executeRequest]);
+    probeEndpoint();
+  }, [probeEndpoint]);
 
-  // Handle deposit confirmation from modal
+  // Handle deposit confirmation - set amount and trigger execution after state updates
   const handleDepositConfirm = useCallback((amount: string) => {
     setDepositAmount(amount);
     setShowDepositModal(false);
-    // Set flag to trigger execution after state updates
-    setPendingExecute(true);
+    setPendingExecution(true); // Will trigger execution via useEffect
   }, []);
 
-  // Execute request after deposit amount is set
+  // Execute request after deposit amount is set (avoids race condition)
   useEffect(() => {
-    if (pendingExecute && depositAmount) {
-      setPendingExecute(false);
-      executeRequest();
+    if (pendingExecution && depositAmount) {
+      setPendingExecution(false);
+      // Force new session creation with the deposit amount
+      executeRequest({ scheme: 'escrow', session: 'new' });
     }
-  }, [pendingExecute, depositAmount, executeRequest]);
-
-  // Get current step index for progress indicator
-  const getCurrentStep = () => {
-    switch (state) {
-      case 'signing':
-        return 0;
-      case 'paying':
-        return 1;
-      case 'executing':
-        return 2;
-      default:
-        return -1;
-    }
-  };
+  }, [pendingExecution, depositAmount, executeRequest]);
 
   const copyRequest = () => {
     navigator.clipboard.writeText(requestJson);
@@ -515,16 +570,6 @@ export function ApiPlayground({
           {copied ? <Check size={14} /> : <Copy size={14} />}
         </button>
       </div>
-
-      {/* Active session badge */}
-      {agentCall.session && (
-        <div className={styles.sessionBadgeWrapper}>
-          <SessionBadge session={agentCall.session} pricePerCall={pricePerCall} />
-          {agentCall.hasActiveSession && (
-            <span className={styles.noSignatureHint}>No signature required</span>
-          )}
-        </div>
-      )}
 
       {/* Playground tabs */}
       <div className={styles.playgroundTabs}>
@@ -722,61 +767,132 @@ export function ApiPlayground({
       <div className={styles.tryAction}>
         <Button
           onClick={handleSendRequest}
-          disabled={state !== 'idle' && state !== 'success' && state !== 'error'}
+          disabled={state === 'loading' || state === 'probing'}
           size="lg"
           className={styles.btnSend}
         >
-          {state === 'idle' || state === 'success' || state === 'error' ? (
+          {state === 'loading' || state === 'probing' ? (
             <>
-              <Play size={16} />
-              {state === 'success' ? 'Run Again' : 'Send Request'}
+              <Loader2 size={16} className={styles.spinner} />
+              {state === 'probing' ? 'Loading...' : 'Processing...'}
+            </>
+          ) : state === 'selecting' ? (
+            <>
+              <Shield size={16} />
+              Select Payment
             </>
           ) : (
             <>
-              <Loader2 size={16} className={styles.spinner} />
-              Processing...
+              <Play size={16} />
+              {state === 'success' ? 'Run Again' : 'Send Request'}
             </>
           )}
         </Button>
         <div className={styles.costBadge}>{formatPrice(pricePerCall)}</div>
       </div>
 
-      {/* Progress overlay during call */}
-      {(state === 'signing' || state === 'paying' || state === 'executing') && (
+      {/* Probing overlay */}
+      {state === 'probing' && (
         <div className={styles.progressOverlay}>
           <div className={styles.progressContent}>
-            <div className={styles.progressSteps}>
-              {PROGRESS_STEPS.map((step, index) => {
-                const currentStep = getCurrentStep();
-                const isComplete = index < currentStep;
-                const isActive = index === currentStep;
-                return (
-                  <div
-                    key={step.id}
-                    className={`${styles.progressStep} ${isComplete ? styles.complete : ''} ${isActive ? styles.active : ''}`}
-                  >
-                    <div className={styles.stepIndicator}>
-                      {isComplete ? (
-                        <Check size={14} />
-                      ) : isActive ? (
-                        <Loader2 size={14} className={styles.spinner} />
-                      ) : (
-                        <span>{index + 1}</span>
-                      )}
-                    </div>
-                    <div className={styles.stepInfo}>
-                      <span className={styles.stepLabel}>{step.label}</span>
-                      <span className={styles.stepDesc}>{step.description}</span>
-                    </div>
+            <Loader2 size={24} className={styles.spinner} />
+            <p className={styles.progressHint}>Checking available payment methods...</p>
+          </div>
+        </div>
+      )}
+
+      {/* Payment scheme selection */}
+      {state === 'selecting' && paymentRequired && (
+        <div className={styles.selectionPanel}>
+          <div className={styles.selectionHeader}>
+            <Shield size={18} />
+            <span>Choose Payment Method</span>
+          </div>
+          <div className={styles.selectionOptions}>
+            {/* Show all existing sessions with balances */}
+            {agentCall.allSessions.map((session, index) => {
+              const balanceUsdc = Number(session.balance) / 1_000_000;
+              const estimatedCalls = Math.floor(Number(session.balance) / (pricePerCall * 10000));
+              const isFirst = index === 0;
+              return (
+                <button
+                  key={session.sessionId}
+                  className={`${styles.selectionOption} ${isFirst ? styles.recommended : ''}`}
+                  onClick={() => handleUseExistingSession(session.sessionId)}
+                >
+                  <div className={styles.optionIcon}>
+                    <CheckCircle2 size={20} />
                   </div>
-                );
-              })}
-            </div>
-            <p className={styles.progressHint}>
-              {state === 'signing' && 'Please confirm the transaction in your wallet'}
-              {state === 'paying' && 'Transaction is being processed...'}
-              {state === 'executing' && 'Agent is processing your request...'}
-            </p>
+                  <div className={styles.optionInfo}>
+                    <span className={styles.optionTitle}>
+                      Use Session {agentCall.allSessions.length > 1 ? `#${index + 1}` : ''}
+                      {isFirst && <span className={styles.recommendedBadge}>Recommended</span>}
+                    </span>
+                    <span className={styles.optionDesc}>
+                      ${balanceUsdc.toFixed(2)} remaining · ~{estimatedCalls} calls · No signature
+                    </span>
+                  </div>
+                  <ChevronRight size={16} className={styles.optionArrow} />
+                </button>
+              );
+            })}
+
+            {/* Pay Per Call (exact scheme) */}
+            {paymentRequired.accepts.some((a) => a.scheme === 'exact') && (
+              <button
+                className={styles.selectionOption}
+                onClick={() => handleSchemeSelect('exact')}
+              >
+                <div className={styles.optionIcon}>
+                  <Zap size={20} />
+                </div>
+                <div className={styles.optionInfo}>
+                  <span className={styles.optionTitle}>Pay Per Call</span>
+                  <span className={styles.optionDesc}>
+                    Sign each call · {formatPrice(pricePerCall)}
+                  </span>
+                </div>
+                <ChevronRight size={16} className={styles.optionArrow} />
+              </button>
+            )}
+
+            {/* New Pre-paid Session (escrow scheme) */}
+            {paymentRequired.accepts.some((a) => a.scheme === 'escrow') && (
+              <button
+                className={styles.selectionOption}
+                onClick={() => handleSchemeSelect('escrow')}
+              >
+                <div className={styles.optionIcon}>
+                  <Wallet size={20} />
+                </div>
+                <div className={styles.optionInfo}>
+                  <span className={styles.optionTitle}>New Pre-paid Session</span>
+                  <span className={styles.optionDesc}>
+                    Deposit once, make multiple calls faster
+                  </span>
+                </div>
+                <ChevronRight size={16} className={styles.optionArrow} />
+              </button>
+            )}
+          </div>
+          <button
+            className={styles.selectionCancel}
+            onClick={() => {
+              setState('idle');
+              setPaymentRequired(null);
+            }}
+          >
+            Cancel
+          </button>
+        </div>
+      )}
+
+      {/* Loading overlay during call */}
+      {state === 'loading' && (
+        <div className={styles.progressOverlay}>
+          <div className={styles.progressContent}>
+            <Loader2 size={32} className={styles.spinner} />
+            <p className={styles.progressHint}>Processing request...</p>
           </div>
         </div>
       )}
@@ -979,11 +1095,18 @@ export function ApiPlayground({
       {/* Deposit Modal for session creation */}
       <DepositModal
         open={showDepositModal}
-        onOpenChange={setShowDepositModal}
+        onOpenChange={(open) => {
+          setShowDepositModal(open);
+          if (!open && state === 'probing') {
+            setState('idle');
+          }
+        }}
         onConfirm={handleDepositConfirm}
         agentName={`@${ownerHandle}/${agentSlug}`}
         pricePerCall={pricePerCall}
-        isLoading={state === 'signing' || state === 'paying'}
+        minDeposit={(selectedRequirements?.extra as Record<string, string> | undefined)?.minDeposit}
+        maxDeposit={(selectedRequirements?.extra as Record<string, string> | undefined)?.maxDeposit}
+        isLoading={state === 'loading'}
       />
     </div>
   );

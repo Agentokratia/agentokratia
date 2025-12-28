@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@agentokratia/x402-escrow':
-        specifier: ^2.0.0
-        version: 2.0.0(@x402/core@2.1.0)(@x402/fetch@2.1.0(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10))(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@3.23.8)
+        specifier: ^2.0.1
+        version: 2.0.1(@x402/core@2.1.0)(@x402/fetch@2.1.0(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10))(viem@2.43.3(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@3.23.8))
       '@radix-ui/react-dialog':
         specifier: ^1.1.1
         version: 1.1.15(@types/react-dom@18.3.7(@types/react@18.3.27))(@types/react@18.3.27)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
@@ -153,11 +153,12 @@ packages:
   '@adraffy/ens-normalize@1.11.1':
     resolution: {integrity: sha512-nhCBV3quEgesuf7c7KYfperqSS14T8bYuvJ8PcLJp6znkZpFc0AuW4qBtr8eKVyPPe/8RSr7sglCWPU5eaxwKQ==}
 
-  '@agentokratia/x402-escrow@2.0.0':
-    resolution: {integrity: sha512-YMbajiBEZ9aDkWjU2BRJ/uoan5AUD82wcfW2Hc8vUKJGAFMM00bX+WONdNDhfnFiBKTHDWo32C4cZ5p1KM6YAA==}
+  '@agentokratia/x402-escrow@2.0.1':
+    resolution: {integrity: sha512-3VPJQFZi03spiOPKbbISnuREmuKmMHUT0d47T5QMu5kjhzYSS5sUhepmCt0dz539aTOYFZJyfgQmSJlO/ydhAw==}
     peerDependencies:
       '@x402/core': ^2.0.0
       '@x402/fetch': ^2.0.0
+      viem: ^2.21.9
     peerDependenciesMeta:
       '@x402/fetch':
         optional: true
@@ -5159,17 +5160,12 @@ snapshots:
 
   '@adraffy/ens-normalize@1.11.1': {}
 
-  '@agentokratia/x402-escrow@2.0.0(@x402/core@2.1.0)(@x402/fetch@2.1.0(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10))(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@3.23.8)':
+  '@agentokratia/x402-escrow@2.0.1(@x402/core@2.1.0)(@x402/fetch@2.1.0(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10))(viem@2.43.3(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@3.23.8))':
     dependencies:
       '@x402/core': 2.1.0
       viem: 2.43.3(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@3.23.8)
     optionalDependencies:
       '@x402/fetch': 2.1.0(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)
-    transitivePeerDependencies:
-      - bufferutil
-      - typescript
-      - utf-8-validate
-      - zod
 
   '@babel/code-frame@7.27.1':
     dependencies:

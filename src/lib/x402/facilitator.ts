@@ -48,7 +48,7 @@ function getChainFromNetwork(network: string) {
     case 8453:
       return base;
     default:
-      return baseSepolia;
+      throw new Error(`Unsupported network: ${network}`);
   }
 }
 
@@ -106,10 +106,14 @@ export async function simulatePayment(
   rpcUrl: string
 ): Promise<SimulateResponse> {
   try {
-    // Check if this is an escrow payload (has sessionId or sessionToken)
+    // Check if this is an escrow payload
+    // - session.id + session.token: escrow usage (existing session)
+    // - sessionParams: escrow creation (new session)
+    // Escrow uses ReceiveWithAuthorization (different EIP-712 type), so skip simulation
+    // The facilitator validates signatures server-side with the correct type
     const payload = paymentPayload.payload as Record<string, unknown>;
-    if (payload.sessionId || payload.sessionToken) {
-      // Escrow payments are validated by the facilitator, not simulated on-chain
+    const session = payload.session as Record<string, unknown> | undefined;
+    if (session?.id || session?.token || payload.sessionParams) {
       return { success: true };
     }
 
@@ -146,6 +150,9 @@ export async function simulatePayment(
     const parsedSig = parseSignature(signature as Hex);
 
     // Convert yParity (0/1) to v (27/28) if needed - USDC expects 27 or 28
+    if (parsedSig.v === undefined && parsedSig.yParity === undefined) {
+      throw new Error('Invalid signature: missing v and yParity');
+    }
     const v = parsedSig.v !== undefined ? Number(parsedSig.v) : Number(parsedSig.yParity) + 27;
 
     // Encode the transferWithAuthorization call
@@ -225,6 +232,109 @@ export async function settlePayment(
       transaction: '',
       network: paymentRequirements.network,
     };
+  }
+}
+
+// ============================================================================
+// Facilitator Config (fetched via HTTPFacilitatorClient.getSupported())
+// ============================================================================
+
+export interface EscrowConfig {
+  facilitator: string;
+  escrowContract: string;
+  tokenCollector: string;
+  minDeposit: string;
+  maxDeposit: string;
+  name: string;
+  version: string;
+}
+
+// Use the SupportedResponse type from the facilitator client
+type FacilitatorSupportedResponse = Awaited<ReturnType<typeof facilitatorClient.getSupported>>;
+
+// Cache for facilitator config (refreshed every 5 minutes)
+let facilitatorConfigCache: {
+  data: FacilitatorSupportedResponse | null;
+  fetchedAt: number;
+} = { data: null, fetchedAt: 0 };
+
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+/**
+ * Fetch supported schemes from facilitator using the x402 client
+ */
+export async function getFacilitatorConfig(): Promise<FacilitatorSupportedResponse> {
+  const now = Date.now();
+
+  // Return cached if still fresh
+  if (facilitatorConfigCache.data && now - facilitatorConfigCache.fetchedAt < CACHE_TTL_MS) {
+    return facilitatorConfigCache.data;
+  }
+
+  try {
+    const data = await facilitatorClient.getSupported();
+    facilitatorConfigCache = { data, fetchedAt: now };
+    return data;
+  } catch (error) {
+    console.error('[x402] Failed to fetch facilitator config:', error);
+    // Return cached data if available, even if stale
+    if (facilitatorConfigCache.data) {
+      return facilitatorConfigCache.data;
+    }
+    throw error;
+  }
+}
+
+/**
+ * Get escrow config for a specific network
+ */
+export async function getEscrowConfig(network: string): Promise<EscrowConfig | null> {
+  try {
+    const config = await getFacilitatorConfig();
+    const escrowScheme = config.kinds.find((k) => k.network === network && k.scheme === 'escrow');
+
+    if (!escrowScheme || !escrowScheme.extra) {
+      return null;
+    }
+
+    const extra = escrowScheme.extra as Record<string, string>;
+    return {
+      facilitator: extra.facilitator,
+      escrowContract: extra.escrowContract,
+      tokenCollector: extra.tokenCollector,
+      minDeposit: extra.minDeposit,
+      maxDeposit: extra.maxDeposit,
+      name: extra.name,
+      version: extra.version,
+    };
+  } catch (error) {
+    console.error('[x402] Failed to get escrow config:', error);
+    return null;
+  }
+}
+
+/**
+ * Get exact scheme config for a specific network
+ */
+export async function getExactConfig(
+  network: string
+): Promise<{ name: string; version: string } | null> {
+  try {
+    const config = await getFacilitatorConfig();
+    const exactScheme = config.kinds.find((k) => k.network === network && k.scheme === 'exact');
+
+    if (!exactScheme || !exactScheme.extra) {
+      return null;
+    }
+
+    const extra = exactScheme.extra as Record<string, string>;
+    return {
+      name: extra.name,
+      version: extra.version,
+    };
+  } catch (error) {
+    console.error('[x402] Failed to get exact config:', error);
+    return null;
   }
 }
 

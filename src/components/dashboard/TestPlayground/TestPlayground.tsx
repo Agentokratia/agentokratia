@@ -13,12 +13,6 @@ const isSecretHeader = (key: string): boolean => {
   return secretHeaders.includes(key.toLowerCase());
 };
 
-// Mask a secret value for display
-const maskSecret = (value: string): string => {
-  if (!value || value.length <= 8) return '••••••••';
-  return value.slice(0, 4) + '••••••••' + value.slice(-4);
-};
-
 interface SchemaField {
   id: string;
   name: string;
