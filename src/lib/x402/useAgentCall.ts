@@ -203,7 +203,7 @@ export function useAgentCall<T = unknown>(
             });
           }
           // For exact scheme, use signPayment
-          return signPayment(paymentRequired, 'exact');
+          return signPayment(paymentRequired);
         };
 
         const result = await callAgentWithPayment<T>(handle, slug, body, createPaymentPayload);

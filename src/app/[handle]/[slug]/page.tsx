@@ -804,7 +804,6 @@ curl -X POST "${endpoint}" \\
               <ApiPlayground
                 ownerHandle={handle}
                 agentSlug={slug}
-                agentName={agent.name}
                 pricePerCall={agent.pricePerCall}
                 inputSchema={agent.inputSchema as Record<string, unknown> | null}
                 outputSchema={agent.outputSchema as Record<string, unknown> | null}

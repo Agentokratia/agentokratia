@@ -20,7 +20,7 @@ export interface UsePaymentSignerOptions {
 }
 
 export interface UsePaymentSignerResult {
-  signPayment: (paymentRequired: PaymentRequired, scheme?: 'exact') => Promise<PaymentPayload>;
+  signPayment: (paymentRequired: PaymentRequired) => Promise<PaymentPayload>;
   isConnected: boolean;
   address: Address | undefined;
 }
@@ -47,7 +47,7 @@ export function usePaymentSigner(_options: UsePaymentSignerOptions = {}): UsePay
   }, [walletClient]);
 
   const signPayment = useCallback(
-    async (paymentRequired: PaymentRequired, _scheme?: 'exact'): Promise<PaymentPayload> => {
+    async (paymentRequired: PaymentRequired): Promise<PaymentPayload> => {
       if (!address || !walletClient) {
         throw new Error('Wallet not connected');
       }

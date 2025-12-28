@@ -652,7 +652,9 @@ export async function POST(
         p_agent_id: agent.id,
         p_amount_cents: agent.price_per_call,
       });
-    } catch {}
+    } catch (e) {
+      console.error('[Proxy] Failed to increment agent stats:', e);
+    }
 
     if (paymentId) {
       feedbackAuthResult = await generateFeedbackAuthForPayment(

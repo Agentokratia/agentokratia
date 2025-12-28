@@ -62,7 +62,6 @@ interface JsonSchema {
 interface ApiPlaygroundProps {
   ownerHandle: string;
   agentSlug: string;
-  agentName: string;
   pricePerCall: number;
   inputSchema: JsonSchema | null;
   outputSchema: JsonSchema | null;
@@ -81,9 +80,9 @@ type CompletionTab = 'response' | 'request-log' | 'review';
 export function ApiPlayground({
   ownerHandle,
   agentSlug,
-  agentName: _,
   pricePerCall,
   inputSchema,
+  outputSchema: _outputSchema, // Reserved for future response schema display
   agentChainId,
   tokenId,
   ownerAddress,
@@ -97,7 +96,6 @@ export function ApiPlayground({
 
   // Payment selection state
   const [paymentRequired, setPaymentRequired] = useState<PaymentRequired | null>(null);
-  const [, setSelectedScheme] = useState<PaymentScheme | null>(null);
   const [selectedRequirements, setSelectedRequirements] = useState<PaymentRequirements | null>(
     null
   );
@@ -342,7 +340,6 @@ export function ApiPlayground({
   const probeEndpoint = useCallback(async () => {
     setState('probing');
     setPaymentRequired(null);
-    setSelectedScheme(null);
     setSelectedRequirements(null);
 
     try {
@@ -388,7 +385,7 @@ export function ApiPlayground({
         )
       );
     }
-  }, [paramValues, fullEndpoint, executeRequest]);
+  }, [paramValues, fullEndpoint]);
 
   // Handle scheme selection
   const handleSchemeSelect = useCallback(
@@ -397,7 +394,6 @@ export function ApiPlayground({
       const req = paymentRequired.accepts.find((a) => a.scheme === scheme);
       if (!req) return;
 
-      setSelectedScheme(scheme);
       setSelectedRequirements(req);
 
       if (scheme === 'escrow') {
@@ -415,7 +411,6 @@ export function ApiPlayground({
   // Handle using existing session (no deposit needed)
   const handleUseExistingSession = useCallback(
     (sessionId?: string) => {
-      setSelectedScheme('escrow');
       setState('idle');
       // Use specific session if provided, otherwise auto-select best
       executeRequest({ scheme: 'escrow', session: sessionId || 'auto' });
