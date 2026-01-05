@@ -233,6 +233,10 @@
   color: var(--stone);
 }
 
+.activitySkeleton {
+  padding: 0;
+}
+
 .activityLoading,
 .activityEmpty {
   display: flex;

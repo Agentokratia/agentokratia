@@ -1,0 +1,236 @@
+/* Mobile Header Bar - only visible on mobile */
+.header {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 56px;
+  background: var(--white);
+  border-bottom: 1px solid var(--sand);
+  padding: 0 var(--space-md);
+  align-items: center;
+  justify-content: space-between;
+  z-index: 100;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  color: var(--ink);
+}
+
+.logo span {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.menuButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--ink);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.menuButton:hover {
+  background: var(--cloud);
+}
+
+/* Overlay */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 199;
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Drawer */
+.drawer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 280px;
+  max-width: 85vw;
+  background: var(--white);
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  transform: translateX(-100%);
+  transition: transform 0.25s ease-out;
+}
+
+.drawer.open {
+  transform: translateX(0);
+}
+
+.drawerHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-md);
+  border-bottom: 1px solid var(--sand);
+}
+
+.drawerLogo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  color: var(--ink);
+}
+
+.drawerLogo span {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.closeButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--stone);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.closeButton:hover {
+  background: var(--cloud);
+  color: var(--ink);
+}
+
+/* Navigation Links */
+.drawerNav {
+  flex: 1;
+  padding: var(--space-md);
+  overflow-y: auto;
+}
+
+.navLink {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  width: 100%;
+  padding: 12px 14px;
+  color: var(--stone);
+  font-size: 15px;
+  font-weight: 500;
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: left;
+  margin-bottom: 4px;
+}
+
+.navLink:hover {
+  background: var(--cloud);
+  color: var(--ink);
+}
+
+.navLink.active {
+  background: var(--ink);
+  color: var(--white);
+}
+
+/* Footer */
+.drawerFooter {
+  padding: var(--space-md);
+  border-top: 1px solid var(--sand);
+}
+
+.networkIndicator {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: 8px 12px;
+  margin-bottom: var(--space-sm);
+  font-size: 12px;
+  color: var(--stone);
+  background: var(--paper);
+  border-radius: var(--radius-sm);
+}
+
+.networkIndicator span {
+  font-weight: 500;
+}
+
+.testnetBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 6px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--orange-600, #ea580c);
+  background: var(--orange-50, #fff7ed);
+  border-radius: var(--radius-xs, 4px);
+}
+
+.accountInfo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 10px 12px;
+  color: var(--stone);
+  font-size: 14px;
+  margin-bottom: var(--space-sm);
+}
+
+.address {
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+.disconnectBtn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  width: 100%;
+  padding: 12px 14px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--error);
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.disconnectBtn:hover {
+  background: var(--cloud);
+}
+
+/* Responsive - show only on mobile */
+@media (max-width: 768px) {
+  .header {
+    display: flex;
+  }
+}

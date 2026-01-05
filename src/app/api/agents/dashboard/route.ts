@@ -81,7 +81,6 @@ export async function GET(request: NextRequest) {
 
     // 2. Get token IDs I own on-chain
     const ownedTokenIds = await getOwnedTokenIds(walletAddress, chainId);
-    const ownedTokenIdSet = new Set(ownedTokenIds);
 
     // 3. Batch verify ownership for on-chain agents
     const onChainAgents = (dbAgents || []).filter(

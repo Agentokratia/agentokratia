@@ -3,9 +3,9 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
-import { Search, Shield, Loader2 } from 'lucide-react';
+import { Search, Shield } from 'lucide-react';
 import { PublicHeader, PublicFooter } from '@/components/layout';
-import { FeedbackWidget } from '@/components/ui';
+import { FeedbackWidget, Skeleton } from '@/components/ui';
 import { formatUsdc } from '@/lib/utils/format';
 import styles from './page.module.css';
 
@@ -140,9 +140,25 @@ export default function MarketplacePage() {
         {/* Content */}
         <section className={styles.content}>
           {isLoading ? (
-            <div className={styles.emptyState}>
-              <Loader2 size={40} className={styles.spinner} />
-              <p>Loading agents...</p>
+            <div className={styles.grid}>
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <div key={i} className={styles.cardSkeleton}>
+                  <div className={styles.cardTop}>
+                    <div className={styles.cardMeta}>
+                      <Skeleton width={140} height={20} style={{ marginBottom: 6 }} />
+                      <Skeleton width={60} height={18} />
+                    </div>
+                    <Skeleton width={70} height={22} />
+                  </div>
+                  <Skeleton width="100%" height={14} style={{ marginBottom: 8 }} />
+                  <Skeleton width="80%" height={14} style={{ marginBottom: 16 }} />
+                  <Skeleton width={65} height={22} style={{ marginBottom: 16 }} />
+                  <div className={styles.cardFooter}>
+                    <Skeleton width={60} height={14} />
+                    <Skeleton width={80} height={14} />
+                  </div>
+                </div>
+              ))}
             </div>
           ) : error ? (
             <div className={styles.emptyState}>

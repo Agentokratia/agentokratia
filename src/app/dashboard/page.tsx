@@ -3,8 +3,8 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
-import { Plus, Box, Search, Check, Loader2, TrendingUp } from 'lucide-react';
-import { Button } from '@/components/ui';
+import { Plus, Box, Search, Check, TrendingUp } from 'lucide-react';
+import { Button, Skeleton } from '@/components/ui';
 import { PageHeader } from '@/components/layout';
 import { useAuthStore } from '@/lib/store/authStore';
 import { formatCurrency, formatUsdc, formatRelativeTime, shortenAddress } from '@/lib/utils/format';
@@ -133,27 +133,19 @@ export default function DashboardPage() {
         <div className={styles.statCard}>
           <div className={styles.statLabel}>Live Agents</div>
           <div className={styles.statValue}>
-            {agentsLoading ? <Loader2 size={16} className={styles.spinner} /> : liveAgents}
+            {agentsLoading ? <Skeleton width={40} height={32} /> : liveAgents}
           </div>
         </div>
         <div className={styles.statCard}>
           <div className={styles.statLabel}>Total Earned</div>
           <div className={`${styles.statValue} ${styles.success}`}>
-            {agentsLoading ? (
-              <Loader2 size={16} className={styles.spinner} />
-            ) : (
-              formatCurrency(totalEarned)
-            )}
+            {agentsLoading ? <Skeleton width={80} height={32} /> : formatCurrency(totalEarned)}
           </div>
         </div>
         <div className={styles.statCard}>
           <div className={styles.statLabel}>Total Calls</div>
           <div className={styles.statValue}>
-            {agentsLoading ? (
-              <Loader2 size={16} className={styles.spinner} />
-            ) : (
-              totalCalls.toLocaleString()
-            )}
+            {agentsLoading ? <Skeleton width={60} height={32} /> : totalCalls.toLocaleString()}
           </div>
         </div>
       </div>
@@ -197,9 +189,20 @@ export default function DashboardPage() {
       </div>
       <div className={styles.activityCard}>
         {paymentsLoading ? (
-          <div className={styles.activityLoading}>
-            <Loader2 size={20} className={styles.spinner} />
-            <span>Loading activity...</span>
+          <div className={styles.activitySkeleton}>
+            {[1, 2, 3].map((i) => (
+              <div key={i} className={styles.activityItem}>
+                <Skeleton variant="circular" width={32} height={32} />
+                <div className={styles.activityInfo}>
+                  <Skeleton width={120} height={16} />
+                  <Skeleton width={180} height={14} style={{ marginTop: 4 }} />
+                </div>
+                <div>
+                  <Skeleton width={60} height={16} />
+                  <Skeleton width={40} height={12} style={{ marginTop: 4 }} />
+                </div>
+              </div>
+            ))}
           </div>
         ) : recentPayments.length === 0 ? (
           <div className={styles.activityEmpty}>

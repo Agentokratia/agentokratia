@@ -307,14 +307,14 @@
   color: var(--error);
 }
 
-.spinner {
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
+/* Skeleton Card */
+.cardSkeleton {
+  display: flex;
+  flex-direction: column;
+  background: var(--white);
+  border: 1px solid var(--sand);
+  border-radius: 12px;
+  padding: 24px;
 }
 
 /* Responsive */

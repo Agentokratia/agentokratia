@@ -9,10 +9,10 @@
  * - Use getOwnedTokenIds() for wallet scanning (dashboard)
  */
 
-import { createPublicClient, http, parseAbiItem, type PublicClient } from 'viem';
+import { createPublicClient, http, parseAbiItem } from 'viem';
 import { base, baseSepolia } from 'viem/chains';
 import { IDENTITY_REGISTRY_ABI } from '@/lib/erc8004/contracts';
-import { getNetworkConfig, type NetworkConfig } from '@/lib/network';
+import { getNetworkConfig } from '@/lib/network';
 
 // Transfer event signature for ERC-721
 const TRANSFER_EVENT = parseAbiItem(

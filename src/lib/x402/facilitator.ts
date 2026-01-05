@@ -1,5 +1,4 @@
-// x402 Facilitator - Using official @coinbase/x402 library
-import { createFacilitatorConfig } from '@coinbase/x402';
+// x402 Facilitator - Using Agentokratia's escrow facilitator
 import {
   HTTPFacilitatorClient,
   decodePaymentSignatureHeader,
@@ -16,10 +15,10 @@ import { createPublicClient, http, encodeFunctionData, parseSignature, type Hex 
 import { baseSepolia, base } from 'viem/chains';
 
 // Environment variables
-const CDP_API_KEY = process.env.CDP_API_KEY || '';
-const CDP_API_SECRET = process.env.CDP_API_SECRET || '';
+const FACILITATOR_URL = process.env.X402_FACILITATOR_URL || 'https://facilitator.agentokratia.com';
+const X402_API_KEY = process.env.X402_API_KEY || '';
 
-// EIP-3009 ABI - same as @x402/evm uses
+// EIP-3009 ABI for payment simulation
 const eip3009ABI = [
   {
     name: 'transferWithAuthorization',
@@ -49,11 +48,11 @@ function getChainFromNetwork(network: string) {
     case 8453:
       return base;
     default:
-      return baseSepolia;
+      throw new Error(`Unsupported network: ${network}`);
   }
 }
 
-// x402 exact scheme payload structure (matches @x402/evm)
+// Payload structure for exact scheme (for simulation)
 interface ExactEvmPayload {
   authorization: {
     from: string;
@@ -78,15 +77,28 @@ export interface SimulateResponse {
     | 'simulation_failed';
 }
 
-// Create facilitator config with CDP credentials
-const facilitatorConfig = createFacilitatorConfig(CDP_API_KEY, CDP_API_SECRET);
-
-// Create HTTP facilitator client
-const facilitatorClient = new HTTPFacilitatorClient(facilitatorConfig);
+// Create HTTP facilitator client for Agentokratia facilitator
+const facilitatorClient = new HTTPFacilitatorClient({
+  url: FACILITATOR_URL,
+  createAuthHeaders: async (): Promise<{
+    verify: Record<string, string>;
+    settle: Record<string, string>;
+    supported: Record<string, string>;
+  }> => {
+    const authHeader: Record<string, string> = X402_API_KEY
+      ? { Authorization: `Bearer ${X402_API_KEY}` }
+      : {};
+    return {
+      verify: authHeader,
+      settle: authHeader,
+      supported: {},
+    };
+  },
+});
 
 /**
  * Simulate the transferWithAuthorization call to catch errors early
- * Uses same payload structure as @x402/evm ExactEvmScheme
+ * Works with both exact and escrow schemes
  */
 export async function simulatePayment(
   paymentPayload: PaymentPayload,
@@ -94,7 +106,18 @@ export async function simulatePayment(
   rpcUrl: string
 ): Promise<SimulateResponse> {
   try {
-    // Extract payload matching x402's ExactEvmPayload structure
+    // Check if this is an escrow payload
+    // - session.id + session.token: escrow usage (existing session)
+    // - sessionParams: escrow creation (new session)
+    // Escrow uses ReceiveWithAuthorization (different EIP-712 type), so skip simulation
+    // The facilitator validates signatures server-side with the correct type
+    const payload = paymentPayload.payload as Record<string, unknown>;
+    const session = payload.session as Record<string, unknown> | undefined;
+    if (session?.id || session?.token || payload.sessionParams) {
+      return { success: true };
+    }
+
+    // Extract payload matching exact scheme structure
     const exactEvmPayload = paymentPayload.payload as unknown as ExactEvmPayload;
 
     if (!exactEvmPayload.authorization || !exactEvmPayload.signature) {
@@ -107,7 +130,7 @@ export async function simulatePayment(
 
     const { authorization, signature } = exactEvmPayload;
 
-    // Quick check for self-payment (from == to) - x402 doesn't check this!
+    // Quick check for self-payment (from == to)
     if (authorization.from.toLowerCase() === authorization.to.toLowerCase()) {
       return {
         success: false,
@@ -123,14 +146,16 @@ export async function simulatePayment(
       transport: http(rpcUrl),
     });
 
-    // Parse signature same way x402 does (using viem's parseSignature)
+    // Parse signature using viem
     const parsedSig = parseSignature(signature as Hex);
 
     // Convert yParity (0/1) to v (27/28) if needed - USDC expects 27 or 28
-    // Modern wallets return yParity (0 or 1), legacy wallets return v (27 or 28)
+    if (parsedSig.v === undefined && parsedSig.yParity === undefined) {
+      throw new Error('Invalid signature: missing v and yParity');
+    }
     const v = parsedSig.v !== undefined ? Number(parsedSig.v) : Number(parsedSig.yParity) + 27;
 
-    // Encode the transferWithAuthorization call - same as x402's settle
+    // Encode the transferWithAuthorization call
     const callData = encodeFunctionData({
       abi: eip3009ABI,
       functionName: 'transferWithAuthorization',
@@ -177,7 +202,7 @@ export async function simulatePayment(
   }
 }
 
-// Verify payment with CDP facilitator
+// Verify payment with Agentokratia facilitator
 export async function verifyPayment(
   paymentPayload: PaymentPayload,
   paymentRequirements: PaymentRequirements
@@ -191,7 +216,7 @@ export async function verifyPayment(
   }
 }
 
-// Settle payment with CDP facilitator
+// Settle payment with Agentokratia facilitator
 export async function settlePayment(
   paymentPayload: PaymentPayload,
   paymentRequirements: PaymentRequirements
@@ -201,13 +226,115 @@ export async function settlePayment(
     return result;
   } catch (error) {
     console.error('[x402] Settle error:', error);
-    // Return error in the SettleResponse format
     return {
       success: false,
       errorReason: 'Settlement service error',
       transaction: '',
       network: paymentRequirements.network,
     };
+  }
+}
+
+// ============================================================================
+// Facilitator Config (fetched via HTTPFacilitatorClient.getSupported())
+// ============================================================================
+
+export interface EscrowConfig {
+  facilitator: string;
+  escrowContract: string;
+  tokenCollector: string;
+  minDeposit: string;
+  maxDeposit: string;
+  name: string;
+  version: string;
+}
+
+// Use the SupportedResponse type from the facilitator client
+type FacilitatorSupportedResponse = Awaited<ReturnType<typeof facilitatorClient.getSupported>>;
+
+// Cache for facilitator config (refreshed every 5 minutes)
+let facilitatorConfigCache: {
+  data: FacilitatorSupportedResponse | null;
+  fetchedAt: number;
+} = { data: null, fetchedAt: 0 };
+
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+/**
+ * Fetch supported schemes from facilitator using the x402 client
+ */
+export async function getFacilitatorConfig(): Promise<FacilitatorSupportedResponse> {
+  const now = Date.now();
+
+  // Return cached if still fresh
+  if (facilitatorConfigCache.data && now - facilitatorConfigCache.fetchedAt < CACHE_TTL_MS) {
+    return facilitatorConfigCache.data;
+  }
+
+  try {
+    const data = await facilitatorClient.getSupported();
+    facilitatorConfigCache = { data, fetchedAt: now };
+    return data;
+  } catch (error) {
+    console.error('[x402] Failed to fetch facilitator config:', error);
+    // Return cached data if available, even if stale
+    if (facilitatorConfigCache.data) {
+      return facilitatorConfigCache.data;
+    }
+    throw error;
+  }
+}
+
+/**
+ * Get escrow config for a specific network
+ */
+export async function getEscrowConfig(network: string): Promise<EscrowConfig | null> {
+  try {
+    const config = await getFacilitatorConfig();
+    const escrowScheme = config.kinds.find((k) => k.network === network && k.scheme === 'escrow');
+
+    if (!escrowScheme || !escrowScheme.extra) {
+      return null;
+    }
+
+    const extra = escrowScheme.extra as Record<string, string>;
+    return {
+      facilitator: extra.facilitator,
+      escrowContract: extra.escrowContract,
+      tokenCollector: extra.tokenCollector,
+      minDeposit: extra.minDeposit,
+      maxDeposit: extra.maxDeposit,
+      name: extra.name,
+      version: extra.version,
+    };
+  } catch (error) {
+    console.error('[x402] Failed to get escrow config:', error);
+    return null;
+  }
+}
+
+/**
+ * Get exact scheme config for a specific network
+ */
+export async function getExactConfig(
+  network: string
+): Promise<{ name: string; version: string } | null> {
+  try {
+    const config = await getFacilitatorConfig();
+    const exactScheme = config.kinds.find((k) => k.network === network && k.scheme === 'exact');
+
+    if (!exactScheme || !exactScheme.extra) {
+      return null;
+    }
+
+    const extra = exactScheme.extra as Record<string, string>;
+    return {
+      name: extra.name,
+      version: extra.version,
+    };
+  } catch (error) {
+    console.error('[x402] Failed to get exact config:', error);
+    return null;
   }
 }
 

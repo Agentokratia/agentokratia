@@ -7,6 +7,8 @@ import {
   decodePaymentSignatureHeader,
   encodePaymentRequiredHeader,
   encodePaymentResponseHeader,
+  getEscrowConfig,
+  getExactConfig,
 } from '@/lib/x402/facilitator';
 import { X402_HEADERS, X402_VERSION } from '@/lib/x402/types';
 import { getNetworkConfig, getDefaultNetworkConfig, type NetworkConfig } from '@/lib/network';
@@ -264,12 +266,70 @@ async function generateFeedbackAuthForPayment(
   }
 }
 
-function buildPaymentRequired(
+async function buildPaymentRequired(
   agent: { name: string; price_per_call: number },
   ownerWallet: string,
   resource: string,
   networkConfig: NetworkConfig
-): PaymentRequired {
+): Promise<PaymentRequired> {
+  const amount = centsToUsdcUnits(agent.price_per_call).toString();
+  const accepts: PaymentRequired['accepts'] = [];
+
+  // Try to get exact scheme config
+  const exactConfig = await getExactConfig(networkConfig.network);
+  if (exactConfig) {
+    accepts.push({
+      scheme: 'exact',
+      network: networkConfig.network,
+      asset: networkConfig.usdcAddress,
+      amount,
+      payTo: ownerWallet,
+      maxTimeoutSeconds: 300,
+      extra: {
+        name: exactConfig.name,
+        version: exactConfig.version,
+      },
+    });
+  }
+
+  // Try to get escrow scheme config
+  const escrowConfig = await getEscrowConfig(networkConfig.network);
+  if (escrowConfig) {
+    accepts.push({
+      scheme: 'escrow',
+      network: networkConfig.network,
+      asset: networkConfig.usdcAddress,
+      amount,
+      payTo: ownerWallet,
+      maxTimeoutSeconds: 300,
+      extra: {
+        name: escrowConfig.name,
+        version: escrowConfig.version,
+        facilitator: escrowConfig.facilitator,
+        escrowContract: escrowConfig.escrowContract,
+        tokenCollector: escrowConfig.tokenCollector,
+        minDeposit: escrowConfig.minDeposit,
+        maxDeposit: escrowConfig.maxDeposit,
+      },
+    });
+  }
+
+  // Fallback to hardcoded exact if facilitator unavailable
+  if (accepts.length === 0) {
+    accepts.push({
+      scheme: 'exact',
+      network: networkConfig.network,
+      asset: networkConfig.usdcAddress,
+      amount,
+      payTo: ownerWallet,
+      maxTimeoutSeconds: 300,
+      extra: {
+        name: networkConfig.usdcEip712Domain.name,
+        version: networkConfig.usdcEip712Domain.version,
+      },
+    });
+  }
+
   return {
     x402Version: X402_VERSION,
     resource: {
@@ -277,20 +337,7 @@ function buildPaymentRequired(
       description: `API call to ${agent.name}`,
       mimeType: 'application/json',
     },
-    accepts: [
-      {
-        scheme: 'exact',
-        network: networkConfig.network,
-        asset: networkConfig.usdcAddress,
-        amount: centsToUsdcUnits(agent.price_per_call).toString(),
-        payTo: ownerWallet,
-        maxTimeoutSeconds: 300,
-        extra: {
-          name: networkConfig.usdcEip712Domain.name,
-          version: networkConfig.usdcEip712Domain.version,
-        },
-      },
-    ],
+    accepts,
   };
 }
 
@@ -340,7 +387,7 @@ export async function POST(
     return errorResponse('Unsupported network for this agent', 503, requestId);
   }
 
-  const paymentRequired = buildPaymentRequired(agent, ownerWallet, resource, networkConfig);
+  const paymentRequired = await buildPaymentRequired(agent, ownerWallet, resource, networkConfig);
 
   // 3. Check payment header
   const paymentHeader = request.headers.get(X402_HEADERS.PAYMENT);
@@ -546,7 +593,11 @@ export async function POST(
   }
 
   // 11. Settle with retry
-  let settleResult: Awaited<ReturnType<typeof settlePayment>> | null = null,
+  // Extend SettleResponse type to include session (returned by escrow facilitator)
+  type ExtendedSettleResult = Awaited<ReturnType<typeof settlePayment>> & {
+    session?: { id: string; token?: string; balance: string; expiresAt?: number };
+  };
+  let settleResult: ExtendedSettleResult | null = null,
     lastError: string | undefined;
   for (let i = 1; i <= 3; i++) {
     settleResult = await settlePayment(paymentPayload, paymentReqs);
@@ -601,7 +652,9 @@ export async function POST(
         p_agent_id: agent.id,
         p_amount_cents: agent.price_per_call,
       });
-    } catch {}
+    } catch (e) {
+      console.error('[Proxy] Failed to increment agent stats:', e);
+    }
 
     if (paymentId) {
       feedbackAuthResult = await generateFeedbackAuthForPayment(
@@ -624,6 +677,8 @@ export async function POST(
       transaction: settleResult?.transaction ?? '',
       network: networkConfig.network,
       requirements: paymentReqs,
+      // Include session info for escrow (client uses this to store session)
+      ...(settleResult?.session && { session: settleResult.session }),
     }),
     'X-Agentokratia-Request-Id': requestId,
   };

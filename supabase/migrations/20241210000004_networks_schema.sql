@@ -39,7 +39,7 @@ INSERT INTO supported_networks (
    'https://basescan.org',
    NULL,
    false, true),
-  -- Base Sepolia (USDC contract uses "USDC" not "USD Coin" for EIP-712 domain)
+  -- Base Sepolia (testnet USDC uses "USDC" not "USD Coin" for EIP-712 domain)
   (84532, 'eip155:84532', 'Base Sepolia',
    'https://sepolia.base.org',
    '0x036CbD53842c5426634e7929541eC2318f3dCF7e',

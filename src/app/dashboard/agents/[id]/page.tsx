@@ -19,7 +19,6 @@ import {
   Shield,
   ShieldCheck,
   MessageSquare,
-  ArrowRight,
 } from 'lucide-react';
 import { useAccount } from 'wagmi';
 import { Button, Badge } from '@/components/ui';

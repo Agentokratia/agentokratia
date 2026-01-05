@@ -1163,6 +1163,56 @@ a.trustItem:hover {
   padding: 24px;
 }
 
+/* Payment Explainer */
+.paymentExplainer {
+  background: var(--cloud);
+  border-radius: var(--radius-md);
+  padding: 16px 20px;
+  margin-bottom: 20px;
+}
+
+.paymentExplainer h4 {
+  margin: 0 0 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.paymentExplainer ol {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--stone);
+}
+
+.paymentExplainer li {
+  margin-bottom: 8px;
+}
+
+.paymentExplainer li:last-child {
+  margin-bottom: 0;
+}
+
+.paymentExplainer li strong {
+  color: var(--ink);
+}
+
+.paymentNote {
+  margin: 12px 0 0;
+  font-size: 12px;
+  color: var(--stone);
+}
+
+.paymentNote a {
+  color: var(--primary);
+  text-decoration: none;
+}
+
+.paymentNote a:hover {
+  text-decoration: underline;
+}
+
 /* Responsive */
 @media (max-width: 900px) {
   .container {

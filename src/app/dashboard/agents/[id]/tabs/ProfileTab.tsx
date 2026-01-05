@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, KeyboardEvent } from 'react';
-import { Button, Input, Textarea, Select } from '@/components/ui';
+import { Button, Input, Select } from '@/components/ui';
 import { Agent } from '../page';
 import styles from './tabs.module.css';
 

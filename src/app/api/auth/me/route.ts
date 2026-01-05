@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin, DbUser, DbUserSession } from '@/lib/db/supabase';
+import { supabaseAdmin, DbUser } from '@/lib/db/supabase';
 import { verifyToken, hashToken } from '@/lib/auth/jwt';
 
 export async function GET(request: NextRequest) {
